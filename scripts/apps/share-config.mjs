@@ -48,7 +48,10 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
       icon: "fa-solid fa-weight-hanging",
       resizable: true
     },
-    position: { width: 560, height: "auto" },
+    // An explicit height rather than "auto": with auto the window grows to fit the
+    // carrier list and pushes the footer buttons off the bottom. Bounded height plus
+    // a scrolling list keeps Save/Apply reachable at any party size.
+    position: { width: 560, height: 640 },
     form: {
       handler: ShareConfigApp.#onSubmit,
       closeOnSubmit: false,

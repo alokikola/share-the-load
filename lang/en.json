@@ -9,6 +9,9 @@
 
   "SHARETHELOAD.Legend.Distribution": "Distribution",
   "SHARETHELOAD.Legend.Carriers": "Carriers",
+  "SHARETHELOAD.Column.Carrier": "Carrier",
+  "SHARETHELOAD.Column.Share": "Share",
+  "SHARETHELOAD.Column.Weight": "Weight",
 
   "SHARETHELOAD.Field.Pile": "Loot Actor",
   "SHARETHELOAD.Field.Enabled": "Distribute This Pile",

@@ -53,8 +53,15 @@
     </div>
   </fieldset>
 
-  <fieldset>
+  <fieldset class="stl-carriers-fieldset">
     <legend>{{localize "SHARETHELOAD.Legend.Carriers"}}</legend>
+
+    <div class="stl-carrier-head">
+      <span class="stl-col-carrier">{{localize "SHARETHELOAD.Column.Carrier"}}</span>
+      <span class="stl-col-share stl-manual-only">{{localize "SHARETHELOAD.Column.Share"}}</span>
+      <span class="stl-col-weight">{{localize "SHARETHELOAD.Column.Weight"}}</span>
+    </div>
+
     <ol class="stl-carriers">
       {{#each carriers}}
       <li class="stl-carrier" data-str="{{this.str}}" data-source="{{this.source}}">
