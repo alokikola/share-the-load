@@ -167,15 +167,8 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
       for ( const done of ["pointerup", "pointercancel", "change", "blur"] ) {
         slider.addEventListener(done, () => { this.#dragBaseline = null; });
       }
-
-      // A range input changes value on wheel, so merely scrolling the carrier list
-      // past a slider silently re-weights the party. Swallow the wheel and hand the
-      // scroll to the list instead, so the list still scrolls but nothing moves.
-      slider.addEventListener("wheel", event => {
-        event.preventDefault();
-        const list = slider.closest(".stl-carriers");
-        if ( list ) list.scrollTop += event.deltaY;
-      }, { passive: false });
+      // Wheel is handled by a document-level capture guard in module.mjs, not here:
+      // something upstream consumes the event before a listener on the input runs.
     });
 
     root.querySelector('[data-action="evenOut"]')?.addEventListener("click", event => {

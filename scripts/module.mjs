@@ -62,8 +62,42 @@ Hooks.once("ready", async () => {
     syncPile, syncAll, clearPile, pileWeight, computeShares,
     openConfig: pileId => new ShareConfigApp({ pileId }).render(true)
   };
+
+  // Registered once, on the document, in the capture phase. See guardSliderWheel.
+  document.addEventListener("wheel", guardSliderWheel, { capture: true, passive: false });
+
   if ( game.settings.get(MODULE_ID, "autoSync") ) await syncAll();
 });
+
+/* -------------------------------------------- */
+/*  Slider wheel guard                           */
+/* -------------------------------------------- */
+
+/**
+ * A range input changes value on wheel, so scrolling the carrier list past a
+ * slider silently re-weights the party -- a real hazard, since the change is
+ * invisible until someone hits Apply.
+ *
+ * This MUST be a document-level listener in the capture phase. Something upstream
+ * (core, or one of the other modules in a typical world) consumes wheel on range
+ * inputs before a listener bound to the input itself ever runs, so calling
+ * preventDefault from there is too late. Verified against a live world: an
+ * element-level guard let the value change anyway, while this stops it dead.
+ *
+ * The scroll is forwarded to the carrier list so the list still scrolls normally --
+ * swallowing the event outright would make the list unscrollable wherever a slider
+ * sits under the cursor, which is most of it.
+ *
+ * @param {WheelEvent} event
+ */
+function guardSliderWheel(event) {
+  const slider = event.target;
+  if ( (slider?.type !== "range") || !slider.closest?.(`.${MODULE_ID}`) ) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  const list = slider.closest(".stl-carriers");
+  if ( list ) list.scrollTop += event.deltaY;
+}
 
 /* -------------------------------------------- */
 /*  Change detection                             */
