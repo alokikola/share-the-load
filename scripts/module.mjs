@@ -136,23 +136,57 @@ Hooks.on("deleteActor", actor => {
 /*  Loot sheet header control                    */
 /* -------------------------------------------- */
 
+/**
+ * The actor a sheet is showing, if this GM could configure it as a pile.
+ * @param {Application} app
+ * @returns {Actor|null}
+ */
+function pileFromSheet(app) {
+  const actor = app?.document ?? app?.actor;
+  if ( !game.user.isGM || !(actor instanceof Actor) ) return null;
+  // Group actors are the expected pile; anything already configured stays reachable.
+  if ( (actor.type !== "group") && !isPile(actor) ) return null;
+  return actor;
+}
+
 Hooks.on("getHeaderControlsApplicationV2", (app, controls) => {
-  const actor = app.document;
-  if ( !game.user.isGM || !(actor instanceof Actor) ) return;
-  if ( (actor.type !== "group") && !isPile(actor) ) return;
+  const actor = pileFromSheet(app);
+  if ( !actor ) return;
 
   // The hook hands over the live source-of-truth array rather than a copy
   // (foundryvtt#12556), so an unguarded push duplicates the entry each re-render.
   if ( controls.some(c => c.action === ACTION) ) return;
 
-  // Header controls dispatch through the application instance's own action map,
-  // so register the handler there rather than expecting a callback on the entry.
-  app.options.actions ??= {};
-  app.options.actions[ACTION] ??= () => new ShareConfigApp({ pileId: actor.id }).render(true);
-
+  // ApplicationV2#_renderHeaderControl binds `onClick` straight to the button, so
+  // the handler travels with the entry. Nothing is injected into the sheet's own
+  // action map, which means this keeps working on sheets that dispatch actions
+  // their own way -- Tidy5e and anything else built on a custom renderer.
   controls.push({
     icon: "fa-solid fa-weight-hanging",
     label: "SHARETHELOAD.HeaderControl",
-    action: ACTION
+    action: ACTION,
+    onClick: () => new ShareConfigApp({ pileId: actor.id }).render(true)
+  });
+});
+
+/**
+ * Same entry on legacy ApplicationV1 sheets.
+ *
+ * V1 dispatches via `this._callHooks(className => `get${className}HeaderButtons`)`,
+ * which walks the class chain -- so this generic hook fires for every V1
+ * application, and the guard in pileFromSheet filters out everything that is not a
+ * pile sheet. Defensive only: dnd5e 5.x and Tidy5e are both ApplicationV2, so this
+ * matters solely for a third-party sheet that has not migrated.
+ */
+Hooks.on("getApplicationHeaderButtons", (app, buttons) => {
+  const actor = pileFromSheet(app);
+  if ( !actor ) return;
+  if ( buttons.some(b => b.class === ACTION) ) return;
+
+  buttons.unshift({
+    label: game.i18n.localize("SHARETHELOAD.HeaderControl"),
+    class: ACTION,
+    icon: "fa-solid fa-weight-hanging",
+    onclick: () => new ShareConfigApp({ pileId: actor.id }).render(true)
   });
 });
