@@ -41,7 +41,8 @@ stack correctly as a result.
 No Foundry install needed for the share maths:
 
 ```
-node test/weight.test.mjs
+node test/weight.test.mjs      # pile weight + share apportionment
+node test/allocate.test.mjs    # slider allocation maths
 ```
 
 `test/console-smoke-test.js` can be pasted into the Foundry console to verify the

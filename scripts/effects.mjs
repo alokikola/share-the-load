@@ -8,10 +8,28 @@ function isActingGM() {
   return game.users.activeGM?.isSelf === true;
 }
 
+/** All of our effects for a given pile on a given carrier. Normally 0 or 1. */
+function findEffects(actor, pileId) {
+  return actor.effects.filter(e => e.getFlag(MODULE_ID, "pile") === pileId);
+}
+
 /** Find our effect for a given pile on a given carrier. */
 function findEffect(actor, pileId) {
-  return actor.effects.find(e => e.getFlag(MODULE_ID, "pile") === pileId);
+  return findEffects(actor, pileId)[0] ?? null;
 }
+
+/**
+ * Serialises syncs per pile.
+ *
+ * syncPile awaits inside its loop, so two overlapping runs could each observe
+ * "no effect yet" and each create one -- producing a doubled penalty. That is
+ * reachable in normal use: saving the config writes a flag, which fires
+ * updateActor and queues a debounced sync, while the Apply button is already
+ * running one directly.
+ *
+ * @type {Map<string, Promise>}
+ */
+const inFlight = new Map();
 
 /**
  * The Active Effect change value.
@@ -54,14 +72,42 @@ function effectData(pile, weight) {
  */
 export async function syncPile(pile) {
   if ( !isActingGM() || !pile ) return;
+  // Queue behind any sync already running for this pile rather than racing it.
+  const run = (inFlight.get(pile.id) ?? Promise.resolve())
+    .catch(() => {})
+    .then(() => syncPileNow(pile));
+  inFlight.set(pile.id, run);
+  try {
+    await run;
+  } finally {
+    if ( inFlight.get(pile.id) === run ) inFlight.delete(pile.id);
+  }
+}
+
+/**
+ * The actual reconciliation. Never call directly -- go through syncPile so the
+ * per-pile serialisation applies.
+ * @param {Actor} pile
+ */
+async function syncPileNow(pile) {
   const shares = computeShares(pile);
 
   // Deliberately unfiltered by actor type: `shares` already contains only valid
   // carriers, and sweeping every actor is what removes a stale effect from someone
   // who is no longer eligible to carry at all.
   for ( const actor of game.actors ) {
-    const existing = findEffect(actor, pile.id);
+    const found = findEffects(actor, pile.id);
     const owed = shares.get(actor.id) ?? 0;
+
+    // Self-heal: a carrier should never hold more than one effect per pile, but an
+    // earlier race could have left duplicates stacking a doubled penalty.
+    if ( found.length > 1 ) {
+      const extras = found.slice(1).map(e => e.id);
+      console.warn(`share-the-load | removing ${extras.length} duplicate effect(s) from ${actor.name}`);
+      await actor.deleteEmbeddedDocuments("ActiveEffect", extras);
+    }
+
+    const existing = found[0] ?? null;
 
     if ( owed > 0 ) {
       if ( !existing ) await actor.createEmbeddedDocuments("ActiveEffect", [effectData(pile, owed)]);
@@ -92,8 +138,10 @@ export async function syncAll() {
 export async function clearPile(pileId) {
   if ( !isActingGM() ) return;
   for ( const actor of game.actors ) {
-    const existing = findEffect(actor, pileId);
-    if ( existing ) await existing.delete();
+    // Delete every match, not just the first: this is the recovery path, so it has
+    // to clear duplicates too.
+    const ids = findEffects(actor, pileId).map(e => e.id);
+    if ( ids.length ) await actor.deleteEmbeddedDocuments("ActiveEffect", ids);
   }
 }
 

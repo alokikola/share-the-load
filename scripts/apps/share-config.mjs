@@ -11,6 +11,7 @@ const SOURCE_LABELS = {
 };
 import { pileWeight, computeShares } from "../weight.mjs";
 import { syncPile, clearPile, assignedWeight } from "../effects.mjs";
+import { rebalance, normalize } from "../allocate.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -30,6 +31,12 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
 
   /** @type {string|null} */
   #pileId;
+
+  /**
+   * Slider values captured when the current drag started, or null when idle.
+   * @type {{rows: HTMLElement[], index: number, values: number[]}|null}
+   */
+  #dragBaseline = null;
 
   /** @override */
   static DEFAULT_OPTIONS = {
@@ -142,12 +149,20 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
       });
     });
 
-    // Dragging one slider pushes the difference onto the others.
+    // Dragging one slider pushes the difference onto the others. Each frame is
+    // computed from the values captured when the drag began -- deriving from the
+    // live values instead lets rounding error accumulate and the sliders visibly
+    // wander while you hold the mouse down.
     root.querySelectorAll('.stl-carrier input[type="range"]').forEach(slider => {
+      slider.addEventListener("pointerdown", () => this.#captureBaseline(slider));
+      slider.addEventListener("keydown", () => this.#captureBaseline(slider));
       slider.addEventListener("input", event => {
-        this.#rebalance(event.target.closest(".stl-carrier"));
+        this.#applyDrag(event.target);
         this.#refreshPreview();
       });
+      for ( const done of ["pointerup", "pointercancel", "change", "blur"] ) {
+        slider.addEventListener(done, () => { this.#dragBaseline = null; });
+      }
     });
 
     root.querySelector('[data-action="evenOut"]')?.addEventListener("click", event => {
@@ -185,36 +200,31 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
   }
 
   /**
-   * Absorb a slider's change into the other carriers so the set still totals 100%,
-   * preserving the ratio between the untouched sliders.
-   * @param {HTMLElement} dragged  The carrier row whose slider moved.
+   * Snapshot the active sliders at the moment an interaction begins. Every frame
+   * of the drag is then computed from this, so the result depends only on where
+   * the pointer is now -- not on the path it took to get there.
+   * @param {HTMLInputElement} slider
    */
-  #rebalance(dragged) {
+  #captureBaseline(slider) {
     const rows = this.#activeRows();
-    if ( !rows.includes(dragged) ) return;
+    const index = rows.indexOf(slider.closest(".stl-carrier"));
+    this.#dragBaseline = (index < 0) ? null : {
+      rows, index, values: rows.map(row => Number(this.#slider(row).value))
+    };
+  }
 
-    const slider = this.#slider(dragged);
-    const others = rows.filter(row => row !== dragged);
+  /**
+   * Absorb a slider's movement into the other carriers, keeping the set at 100%.
+   * @param {HTMLInputElement} slider
+   */
+  #applyDrag(slider) {
+    const row = slider.closest(".stl-carrier");
+    // Keyboard adjustment, or a drag that began before this row was active.
+    if ( !this.#dragBaseline?.rows.includes(row) ) this.#captureBaseline(slider);
+    const baseline = this.#dragBaseline;
+    if ( !baseline ) return;
 
-    // A sole carrier has nowhere to push weight, so it necessarily holds all of it.
-    if ( !others.length ) {
-      slider.value = 100;
-      this.#updateSum(100);
-      return;
-    }
-
-    const value = Math.clamp(Number(slider.value), 0, 100);
-    slider.value = value;
-
-    const target = 100 - value;
-    const othersTotal = others.reduce((sum, row) => sum + Number(this.#slider(row).value), 0);
-    const values = others.map(row => {
-      // With every other slider at zero there is no ratio to preserve; share equally.
-      if ( othersTotal <= 0 ) return target / others.length;
-      return Number(this.#slider(row).value) * target / othersTotal;
-    });
-
-    this.#distribute(others, values, target, value);
+    this.#writeValues(baseline.rows, rebalance(baseline.values, baseline.index, Number(slider.value)));
   }
 
   /**
@@ -232,34 +242,31 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
     const rows = this.#activeRows();
     if ( !rows.length ) return this.#updateSum(0);
 
+    // A carrier that was just checked holds nothing yet; seed it with an even share
+    // so enabling someone actually gives them load.
     const even = 100 / rows.length;
-    for ( const row of rows ) {
-      if ( Number(this.#slider(row).value) <= 0 ) this.#slider(row).value = Math.round(even);
-    }
+    const seeded = rows.map(row => {
+      const value = Number(this.#slider(row).value);
+      return value > 0 ? value : even;
+    });
 
-    const total = rows.reduce((sum, row) => sum + Number(this.#slider(row).value), 0);
-    const values = rows.map(row => (total > 0 ? Number(this.#slider(row).value) * 100 / total : even));
-    this.#distribute(rows, values, 100);
+    this.#writeValues(rows, normalize(seeded));
+    this.#dragBaseline = null;
   }
 
   /**
-   * Write integer slider values summing to exactly `target`, parking any rounding
-   * remainder on the largest allocation.
-   * @param {HTMLElement[]} rows      Rows to write.
-   * @param {number[]} values         Unrounded values for those rows.
-   * @param {number} target           Total the rows must add up to.
-   * @param {number} [held=0]         Allocation held by rows outside this set.
+   * Push integer values onto the sliders.
+   * Values already correct are left alone -- writing back to the slider under the
+   * pointer fights the browser's own drag handling and makes the thumb stutter.
+   * @param {HTMLElement[]} rows
+   * @param {number[]} values
    */
-  #distribute(rows, values, target, held = 0) {
-    const rounded = values.map(value => Math.round(value));
-    const drift = target - rounded.reduce((a, b) => a + b, 0);
-    if ( drift !== 0 && rounded.length ) {
-      let largest = 0;
-      for ( let i = 1; i < rounded.length; i++ ) if ( rounded[i] > rounded[largest] ) largest = i;
-      rounded[largest] = Math.clamp(rounded[largest] + drift, 0, 100);
-    }
-    rows.forEach((row, i) => { this.#slider(row).value = rounded[i]; });
-    this.#updateSum(held + rounded.reduce((a, b) => a + b, 0));
+  #writeValues(rows, values) {
+    rows.forEach((row, i) => {
+      const slider = this.#slider(row);
+      if ( Number(slider.value) !== values[i] ) slider.value = values[i];
+    });
+    this.#updateSum(values.reduce((a, b) => a + b, 0));
   }
 
   /** Show the live allocation total, which should read 100% at all times. */
