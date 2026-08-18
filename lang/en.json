@@ -49,5 +49,11 @@
   "SHARETHELOAD.Setting.Menu.Name": "Carrier Configuration",
   "SHARETHELOAD.Setting.Menu.Hint": "Choose which characters share the weight of each party loot actor.",
   "SHARETHELOAD.Setting.Menu.Label": "Configure Carriers",
-  "SHARETHELOAD.Warn.EncumbranceOff": "This world has encumbrance tracking disabled, so distributed weight will have no effect in play. Enable it under the dnd5e system settings."
+  "SHARETHELOAD.Warn.EncumbranceOff": "This world has encumbrance tracking disabled, so distributed weight will have no effect in play. Enable it under the dnd5e system settings.",
+  "SHARETHELOAD.Setting.Purge.Name": "Remove All Effects",
+  "SHARETHELOAD.Setting.Purge.Hint": "Strip every shared-load effect from every actor. Do this before disabling or uninstalling the module, or carriers keep their reduced capacity with nothing left to explain it.",
+  "SHARETHELOAD.Setting.Purge.Label": "Remove All Effects",
+  "SHARETHELOAD.Purge.Title": "Remove All Shared Load Effects",
+  "SHARETHELOAD.Purge.Prompt": "Remove every effect this module has applied, from every actor in the world? Pile configurations are kept, so you can re-apply afterwards.",
+  "SHARETHELOAD.Purge.Done": "Removed {count} shared load effect(s)."
 }

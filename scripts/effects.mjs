@@ -145,6 +145,28 @@ export async function clearPile(pileId) {
   }
 }
 
+/**
+ * Remove every effect this module has ever applied, across all actors, regardless
+ * of pile configuration.
+ *
+ * This is the uninstall path, and it matters: the effect targets a dnd5e field, so
+ * the SYSTEM applies it, not us. Disabling or deleting this module would otherwise
+ * leave every carrier permanently weakened with nothing left to explain why.
+ *
+ * @returns {Promise<number>}  How many effects were removed.
+ */
+export async function purgeAllEffects() {
+  if ( !isActingGM() ) return 0;
+  let removed = 0;
+  for ( const actor of game.actors ) {
+    const ids = actor.effects.filter(e => e.getFlag(MODULE_ID, "pile") !== undefined).map(e => e.id);
+    if ( !ids.length ) continue;
+    await actor.deleteEmbeddedDocuments("ActiveEffect", ids);
+    removed += ids.length;
+  }
+  return removed;
+}
+
 /** Weight currently assigned to a carrier by a given pile, for display. */
 export function assignedWeight(actor, pileId) {
   return findEffect(actor, pileId)?.getFlag(MODULE_ID, "weight") ?? 0;

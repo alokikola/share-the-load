@@ -1,7 +1,8 @@
 import { MODULE_ID, isPile, getPileConfig, candidatePiles, CARRIER_TYPES } from "./config.mjs";
-import { syncPile, syncAll, clearPile } from "./effects.mjs";
+import { syncPile, syncAll, clearPile, purgeAllEffects } from "./effects.mjs";
 import { pileWeight, computeShares } from "./weight.mjs";
 import ShareConfigApp from "./apps/share-config.mjs";
+import PurgeEffectsMenu from "./apps/purge-menu.mjs";
 
 const ACTION = "shareTheLoad";
 
@@ -55,11 +56,22 @@ Hooks.once("init", () => {
     type: ShareConfigApp,
     restricted: true
   });
+
+  // The uninstall path: reachable even with no piles configured, because the
+  // effects outlive this module unless something removes them.
+  game.settings.registerMenu(MODULE_ID, "purgeMenu", {
+    name: "SHARETHELOAD.Setting.Purge.Name",
+    hint: "SHARETHELOAD.Setting.Purge.Hint",
+    label: "SHARETHELOAD.Setting.Purge.Label",
+    icon: "fa-solid fa-broom",
+    type: PurgeEffectsMenu,
+    restricted: true
+  });
 });
 
 Hooks.once("ready", async () => {
   game.modules.get(MODULE_ID).api = {
-    syncPile, syncAll, clearPile, pileWeight, computeShares,
+    syncPile, syncAll, clearPile, purgeAllEffects, pileWeight, computeShares,
     openConfig: pileId => new ShareConfigApp({ pileId }).render(true)
   };
 
