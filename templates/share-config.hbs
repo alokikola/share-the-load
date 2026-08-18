@@ -1,0 +1,114 @@
+<div class="stl-body" data-strategy="{{config.strategy}}" data-total="{{total}}">
+
+  <div class="form-group">
+    <label>{{localize "SHARETHELOAD.Field.Pile"}}</label>
+    <div class="form-fields">
+      <select name="pileId">
+        {{#each piles}}
+          <option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.name}}</option>
+        {{/each}}
+      </select>
+    </div>
+    <p class="hint">{{localize "SHARETHELOAD.Hint.Pile"}}</p>
+  </div>
+
+  {{#if hasPile}}
+
+  <fieldset>
+    <legend>{{localize "SHARETHELOAD.Legend.Distribution"}}</legend>
+
+    <div class="form-group">
+      <label>{{localize "SHARETHELOAD.Field.Enabled"}}</label>
+      <div class="form-fields">
+        <input type="checkbox" name="enabled" {{checked config.enabled}}>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "SHARETHELOAD.Field.Strategy"}}</label>
+      <div class="form-fields">
+        <select name="strategy">
+          {{#each strategies}}
+            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <p class="hint stl-manual-hint">{{localize "SHARETHELOAD.Hint.Manual"}}</p>
+    </div>
+
+    {{#if hasCurrency}}
+    <div class="form-group">
+      <label>{{localize "SHARETHELOAD.Field.IncludeCurrency"}}</label>
+      <div class="form-fields">
+        <input type="checkbox" name="includeCurrency" {{checked config.includeCurrency}}>
+      </div>
+      {{#unless currencyRuleActive}}
+        <p class="hint warning">{{localize "SHARETHELOAD.Hint.CurrencyRuleOff"}}</p>
+      {{/unless}}
+    </div>
+    {{/if}}
+
+    <div class="stl-total">
+      {{localize "SHARETHELOAD.Field.TotalWeight"}}: <strong>{{total}}</strong>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>{{localize "SHARETHELOAD.Legend.Carriers"}}</legend>
+    <ol class="stl-carriers">
+      {{#each carriers}}
+      <li class="stl-carrier" data-str="{{this.str}}" data-source="{{this.source}}">
+        <label class="stl-carrier-label">
+          <input type="checkbox" name="members.{{this.id}}" {{checked this.checked}}>
+          <img src="{{this.img}}" alt="{{this.name}}" width="28" height="28">
+          <span class="stl-carrier-name">{{this.name}}</span>
+          {{#if this.isNPC}}
+            <i class="fa-solid fa-horse stl-npc" title="{{localize "SHARETHELOAD.NonPlayerCarrier"}}"></i>
+          {{/if}}
+          <span class="stl-source stl-source-{{this.source}}">{{this.sourceLabel}}</span>
+        </label>
+
+        {{!-- Kept outside the label so dragging does not toggle the checkbox. --}}
+        <div class="stl-slider">
+          <input type="range" name="weights.{{this.id}}" min="0" max="100" step="1" value="{{this.weight}}">
+        </div>
+
+        <span class="stl-carrier-share">
+          <span class="stl-share-weight">{{this.share}}</span>
+          <span class="stl-share-pct"></span>
+          {{#if this.applied}}<i class="fa-solid fa-check stl-applied" title="{{localize "SHARETHELOAD.Applied"}}"></i>{{/if}}
+        </span>
+      </li>
+      {{else}}
+        <li class="stl-empty">{{localize "SHARETHELOAD.NoCarriers"}}</li>
+      {{/each}}
+    </ol>
+
+    <div class="stl-carriers-footer">
+      <p class="hint">{{localize "SHARETHELOAD.Hint.Carriers"}}</p>
+      <span class="stl-allocated stl-manual-only">
+        {{localize "SHARETHELOAD.Field.Allocated"}}: <span class="stl-sum">100%</span>
+      </span>
+      <button type="button" data-action="evenOut" class="stl-manual-only">
+        <i class="fa-solid fa-scale-balanced"></i> {{localize "SHARETHELOAD.Button.EvenOut"}}
+      </button>
+    </div>
+  </fieldset>
+
+  <footer class="stl-footer">
+    <button type="submit" data-action="save">
+      <i class="fa-solid fa-save"></i> {{localize "SHARETHELOAD.Button.Save"}}
+    </button>
+    <button type="submit" data-action="apply">
+      <i class="fa-solid fa-weight-hanging"></i> {{localize "SHARETHELOAD.Button.Apply"}}
+    </button>
+    <button type="button" data-action="clear">
+      <i class="fa-solid fa-trash"></i> {{localize "SHARETHELOAD.Button.Clear"}}
+    </button>
+  </footer>
+
+  {{else}}
+    <p class="notification warning">{{localize "SHARETHELOAD.NoPiles"}}</p>
+  {{/if}}
+
+</div>

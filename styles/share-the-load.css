@@ -1,0 +1,129 @@
+.share-the-load .stl-body { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.share-the-load .stl-total {
+  text-align: right;
+  font-size: var(--font-size-13, 13px);
+  opacity: 0.85;
+}
+
+.share-the-load .stl-carriers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 15rem;
+  overflow-y: auto;
+}
+
+.share-the-load .stl-carrier {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.15rem 0.25rem;
+  border-bottom: 1px solid var(--color-border-light-tertiary, rgba(0,0,0,0.1));
+}
+
+.share-the-load .stl-carrier-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  cursor: pointer;
+}
+
+.share-the-load .stl-carrier-label img {
+  border: none;
+  border-radius: 3px;
+  object-fit: cover;
+  flex: 0 0 28px;
+}
+
+.share-the-load .stl-carrier-name { flex: 1; }
+
+.share-the-load .stl-carrier-share {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.9;
+  min-width: 4rem;
+  text-align: right;
+}
+
+.share-the-load .stl-applied { margin-left: 0.35rem; opacity: 0.7; }
+
+.share-the-load .stl-empty { padding: 0.5rem; opacity: 0.7; font-style: italic; }
+
+.share-the-load .stl-footer {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.share-the-load .hint.warning { color: var(--color-level-warning, #c9971a); }
+
+/* Slider column and the Even Out button only apply to the manual strategy. */
+.share-the-load .stl-body:not([data-strategy="manual"]) .stl-slider,
+.share-the-load .stl-body:not([data-strategy="manual"]) .stl-manual-only,
+.share-the-load .stl-body:not([data-strategy="manual"]) .stl-manual-hint {
+  display: none;
+}
+
+.share-the-load .stl-slider { flex: 0 0 9rem; display: flex; align-items: center; }
+.share-the-load .stl-slider input[type="range"] { width: 100%; margin: 0; }
+
+.share-the-load .stl-carrier-label { flex: 1 1 auto; min-width: 6rem; }
+
+.share-the-load .stl-share-pct {
+  display: inline-block;
+  min-width: 2.5rem;
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.6;
+}
+
+.share-the-load .stl-carriers-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.share-the-load .stl-carriers-footer .hint { margin: 0; }
+.share-the-load .stl-carriers-footer button { flex: 0 0 auto; width: auto; }
+
+/* Unchecked carriers keep their slider in the DOM (so its value still submits)
+   but make it inert rather than disabled. */
+.share-the-load .stl-carrier.stl-inactive .stl-slider {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.share-the-load .stl-carrier.stl-inactive .stl-carrier-name { opacity: 0.6; }
+
+.share-the-load .stl-allocated {
+  flex: 0 0 auto;
+  font-size: var(--font-size-12, 12px);
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+.share-the-load .stl-sum { font-variant-numeric: tabular-nums; font-weight: bold; }
+
+/* Should never show in normal use; a visible cue if the invariant ever breaks. */
+.share-the-load .stl-sum.stl-sum-off { color: var(--color-level-warning, #c9971a); }
+
+/* Why each candidate is on the list. */
+.share-the-load .stl-source {
+  flex: 0 0 auto;
+  font-size: var(--font-size-10, 10px);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+  opacity: 0.55;
+}
+
+.share-the-load .stl-source-group { opacity: 0.75; }
+
+/* A carrier kept only because it is already saved: eligibility has lapsed. */
+.share-the-load .stl-source-configured { color: var(--color-level-warning, #c9971a); opacity: 0.9; }
+
+.share-the-load .stl-npc { flex: 0 0 auto; opacity: 0.5; font-size: var(--font-size-11, 11px); }
