@@ -56,10 +56,13 @@
 }
 
 /* The slider column only exists in manual mode; both the header and the rows hide
-   their middle cell together, so the tracks stay aligned. */
+   their middle cell together, so the tracks stay aligned.
+   Kept narrow (7.2rem rather than 9rem) to hand the difference to the name column,
+   which is the only flexible track -- a ~115px range input is still comfortable to
+   drag, and carrier names were truncating well before they needed to. */
 .share-the-load .stl-body[data-strategy="manual"] .stl-carrier,
 .share-the-load .stl-body[data-strategy="manual"] .stl-carrier-head {
-  grid-template-columns: minmax(0, 1fr) 9rem 6.5rem;
+  grid-template-columns: minmax(0, 1fr) 7.2rem 6.5rem;
 }
 
 .share-the-load .stl-carrier-head {
@@ -181,8 +184,7 @@
 /* -------------------------------------------- */
 
 .share-the-load .stl-body:not([data-strategy="manual"]) .stl-slider,
-.share-the-load .stl-body:not([data-strategy="manual"]) .stl-manual-only,
-.share-the-load .stl-body:not([data-strategy="manual"]) .stl-manual-hint {
+.share-the-load .stl-body:not([data-strategy="manual"]) .stl-manual-only {
   display: none;
 }
 
@@ -190,11 +192,10 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  justify-content: space-between;
+  justify-content: flex-end;
   flex: 0 0 auto;
 }
 
-.share-the-load .stl-carriers-footer .hint { margin: 0; }
 .share-the-load .stl-carriers-footer button { flex: 0 0 auto; width: auto; }
 
 .share-the-load .stl-allocated {
@@ -210,3 +211,15 @@
 .share-the-load .stl-sum.stl-sum-off { color: var(--color-level-warning, #c9971a); }
 
 .share-the-load .hint.warning { color: var(--color-level-warning, #c9971a); }
+
+/* Explanatory text lives in native Foundry tooltips rather than inline paragraphs:
+   it is read once and then occupies list space forever. */
+.share-the-load .stl-info {
+  margin-left: 0.35rem;
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.45;
+  cursor: help;
+  vertical-align: middle;
+}
+
+.share-the-load .stl-info:hover { opacity: 0.9; }

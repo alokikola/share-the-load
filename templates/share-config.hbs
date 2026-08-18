@@ -1,7 +1,10 @@
 <div class="stl-body" data-strategy="{{config.strategy}}" data-total="{{total}}">
 
   <div class="form-group">
-    <label>{{localize "SHARETHELOAD.Field.Pile"}}</label>
+    <label>
+      {{localize "SHARETHELOAD.Field.Pile"}}
+      <i class="fa-solid fa-circle-info stl-info" data-tooltip="{{localize "SHARETHELOAD.Hint.Pile"}}"></i>
+    </label>
     <div class="form-fields">
       <select name="pileId">
         {{#each piles}}
@@ -9,7 +12,6 @@
         {{/each}}
       </select>
     </div>
-    <p class="hint">{{localize "SHARETHELOAD.Hint.Pile"}}</p>
   </div>
 
   {{#if hasPile}}
@@ -25,7 +27,10 @@
     </div>
 
     <div class="form-group">
-      <label>{{localize "SHARETHELOAD.Field.Strategy"}}</label>
+      <label>
+        {{localize "SHARETHELOAD.Field.Strategy"}}
+        <i class="fa-solid fa-circle-info stl-info stl-manual-only" data-tooltip="{{localize "SHARETHELOAD.Hint.Manual"}}"></i>
+      </label>
       <div class="form-fields">
         <select name="strategy">
           {{#each strategies}}
@@ -33,7 +38,6 @@
           {{/each}}
         </select>
       </div>
-      <p class="hint stl-manual-hint">{{localize "SHARETHELOAD.Hint.Manual"}}</p>
     </div>
 
     {{#if hasCurrency}}
@@ -54,7 +58,10 @@
   </fieldset>
 
   <fieldset class="stl-carriers-fieldset">
-    <legend>{{localize "SHARETHELOAD.Legend.Carriers"}}</legend>
+    <legend>
+      {{localize "SHARETHELOAD.Legend.Carriers"}}
+      <i class="fa-solid fa-circle-info stl-info" data-tooltip="{{localize "SHARETHELOAD.Hint.Carriers"}}"></i>
+    </legend>
 
     <div class="stl-carrier-head">
       <span class="stl-col-carrier">{{localize "SHARETHELOAD.Column.Carrier"}}</span>
@@ -64,7 +71,7 @@
 
     <ol class="stl-carriers">
       {{#each carriers}}
-      <li class="stl-carrier" data-str="{{this.str}}" data-source="{{this.source}}">
+      <li class="stl-carrier" data-str="{{this.str}}" data-cap="{{this.capacity}}" data-source="{{this.source}}">
         <label class="stl-carrier-label">
           <input type="checkbox" name="members.{{this.id}}" {{checked this.checked}}>
           <img src="{{this.img}}" alt="{{this.name}}" width="28" height="28">
@@ -92,7 +99,6 @@
     </ol>
 
     <div class="stl-carriers-footer">
-      <p class="hint">{{localize "SHARETHELOAD.Hint.Carriers"}}</p>
       <span class="stl-allocated stl-manual-only">
         {{localize "SHARETHELOAD.Field.Allocated"}}: <span class="stl-sum">100%</span>
       </span>

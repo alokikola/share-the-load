@@ -2,6 +2,11 @@ import {
   MODULE_ID, STRATEGIES, getPileConfig, setPileConfig,
   candidatePiles, carrierCandidates, isPile
 } from "../config.mjs";
+import { pileWeight, computeShares, carrierCapacity } from "../weight.mjs";
+import { syncPile, clearPile, assignedWeight } from "../effects.mjs";
+import { rebalance, normalize } from "../allocate.mjs";
+
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 /** Badge shown against each candidate, explaining why it is on the list. */
 const SOURCE_LABELS = {
@@ -9,11 +14,6 @@ const SOURCE_LABELS = {
   owned: "SHARETHELOAD.Source.Owned",
   configured: "SHARETHELOAD.Source.Configured"
 };
-import { pileWeight, computeShares } from "../weight.mjs";
-import { syncPile, clearPile, assignedWeight } from "../effects.mjs";
-import { rebalance, normalize } from "../allocate.mjs";
-
-const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 /**
  * Per-pile carrier configuration. Opened either from the settings menu (no pile
@@ -113,6 +113,7 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
           // Raw Strength is exposed so the preview can be recalculated client-side
           // without a round trip while the GM is still adjusting the form.
           str: Math.max(actor.system.abilities?.str?.value ?? 10, 1),
+          capacity: Math.round(carrierCapacity(actor) * 10) / 10,
           weight: Number(config?.weights?.[actor.id] ?? (isMember ? evenDefault : 0)),
           share: shares.get(actor.id) ?? 0,
           applied: assignedWeight(actor, this.#pileId)
@@ -166,6 +167,15 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
       for ( const done of ["pointerup", "pointercancel", "change", "blur"] ) {
         slider.addEventListener(done, () => { this.#dragBaseline = null; });
       }
+
+      // A range input changes value on wheel, so merely scrolling the carrier list
+      // past a slider silently re-weights the party. Swallow the wheel and hand the
+      // scroll to the list instead, so the list still scrolls but nothing moves.
+      slider.addEventListener("wheel", event => {
+        event.preventDefault();
+        const list = slider.closest(".stl-carriers");
+        if ( list ) list.scrollTop += event.deltaY;
+      }, { passive: false });
     });
 
     root.querySelector('[data-action="evenOut"]')?.addEventListener("click", event => {
@@ -301,10 +311,14 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
     const basis = row => {
       if ( strategy === "manual" ) return Number(this.#slider(row).value);
       if ( strategy === "strength" ) return Number(row.dataset.str || 1);
+      if ( strategy === "capacity" ) return Number(row.dataset.cap || 0);
       return 1;
     };
 
-    const sum = active.reduce((acc, row) => acc + basis(row), 0);
+    // Mirrors apportion(): a capacity split is only trusted when every carrier
+    // reports a usable figure, otherwise it falls back to an even share.
+    const usable = (strategy !== "capacity") || active.every(row => Number(row.dataset.cap) > 0);
+    const sum = usable ? active.reduce((acc, row) => acc + basis(row), 0) : 0;
     const fallback = sum <= 0;
 
     for ( const row of rows ) {

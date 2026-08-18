@@ -13,6 +13,7 @@ export const CHANGE_KEY = "system.attributes.encumbrance.bonuses.overall";
 export const STRATEGIES = {
   even: "SHARETHELOAD.Strategy.Even",
   strength: "SHARETHELOAD.Strategy.Strength",
+  capacity: "SHARETHELOAD.Strategy.Capacity",
   manual: "SHARETHELOAD.Strategy.Manual"
 };
 

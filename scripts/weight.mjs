@@ -50,6 +50,40 @@ export function pileWeight(pile, config) {
 }
 
 /**
+ * A carrier's carrying capacity, BEFORE any share-the-load effect is applied.
+ *
+ * Deliberately not read from `encumbrance.max`: our own effect reduces that, so
+ * weighting by it would feed the output back into the input and oscillate.
+ * Reconstructing it from `str x threshold x mod` avoids that, because our effect
+ * writes `bonuses` while `mod` derives only from size and `multipliers`.
+ *
+ * Verified against a live world: str x 15 x mod reproduces `max` exactly for
+ * Tiny (mod 0.5), Medium (1) and Large (2) carriers.
+ *
+ * @param {Actor} actor
+ * @returns {number}  Capacity in the actor's base weight unit, or 0 if unknown.
+ */
+export function carrierCapacity(actor) {
+  const unitSystem = game.settings.get("dnd5e", "metricWeightUnits") ? "metric" : "imperial";
+
+  if ( actor.type === "vehicle" ) {
+    // Vehicles derive capacity from cargo, not Strength, and dnd5e defaults an
+    // unset cargo capacity to Infinity -- which would poison a proportional split.
+    const cargo = actor.system.attributes?.capacity?.cargo;
+    if ( !Number.isFinite(cargo?.value) || (cargo.value <= 0) ) return 0;
+    const target = baseUnitFor(actor);
+    const convert = globalThis.dnd5e?.utils?.convertWeight;
+    return (cargo.units && convert) ? convert(cargo.value, cargo.units, target) : cargo.value;
+  }
+
+  const threshold = CONFIG.DND5E.encumbrance.threshold?.maximum?.[unitSystem] ?? 15;
+  const mod = actor.system.attributes?.encumbrance?.mod ?? 1;
+  const str = actor.system.abilities?.str?.value ?? 10;
+  const capacity = str * threshold * mod;
+  return Number.isFinite(capacity) ? capacity : 0;
+}
+
+/**
  * Split a pile's weight across its configured carriers.
  *
  * Strategies:
@@ -106,6 +140,18 @@ function apportion(total, carriers, cfg) {
     const sum = weights.reduce((a, b) => a + b, 0);
     // All sliders at zero is not a meaningful instruction; fall back to even.
     if ( sum > 0 ) return carriers.map((a, i) => total * (weights[i] / sum));
+  } else if ( cfg.strategy === "capacity" ) {
+    // Proportional to what each carrier can actually hold, so everyone ends up at
+    // the same percentage of their limit. This is what keeps a familiar safe: an
+    // owl's capacity is a fraction of a PC's, so it receives a fraction of the load
+    // rather than an even share that would drive its thresholds negative.
+    const weights = carriers.map(carrierCapacity);
+    const sum = weights.reduce((a, b) => a + b, 0);
+    // A carrier of unknown capacity (0) would silently receive nothing, so only
+    // trust this split when every carrier reports a usable figure.
+    if ( (sum > 0) && weights.every(w => w > 0) ) {
+      return carriers.map((a, i) => total * (weights[i] / sum));
+    }
   } else if ( cfg.strategy === "strength" ) {
     const weights = carriers.map(a => Math.max(a.system.abilities?.str?.value ?? 10, 1));
     const sum = weights.reduce((a, b) => a + b, 0);

@@ -27,6 +27,7 @@
 
   "SHARETHELOAD.Strategy.Even": "Evenly between carriers",
   "SHARETHELOAD.Strategy.Strength": "Weighted by Strength score",
+  "SHARETHELOAD.Strategy.Capacity": "Weighted by carrying capacity",
   "SHARETHELOAD.Strategy.Manual": "Manually, with sliders",
 
   "SHARETHELOAD.Button.EvenOut": "Even Out",
