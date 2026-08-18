@@ -16,6 +16,10 @@
 
   {{#if hasPile}}
 
+  {{#if encumbranceOff}}
+    <p class="notification warning">{{localize "SHARETHELOAD.Warn.EncumbranceOff"}}</p>
+  {{/if}}
+
   <fieldset>
     <legend>{{localize "SHARETHELOAD.Legend.Distribution"}}</legend>
 
@@ -52,8 +56,18 @@
     </div>
     {{/if}}
 
-    <div class="stl-total">
-      {{localize "SHARETHELOAD.Field.TotalWeight"}}: <strong>{{total}}</strong>
+    <div class="stl-metrics">
+      <span class="stl-metric">
+        {{localize "SHARETHELOAD.Metric.Items"}} <strong>{{breakdown.items}}</strong>
+      </span>
+      {{#if showCoin}}
+      <span class="stl-metric">
+        {{localize "SHARETHELOAD.Metric.Coin"}} <strong>{{breakdown.coin}}</strong>
+      </span>
+      {{/if}}
+      <span class="stl-metric stl-metric-total">
+        {{localize "SHARETHELOAD.Metric.Total"}} <strong>{{total}}</strong>
+      </span>
     </div>
   </fieldset>
 
@@ -66,12 +80,13 @@
     <div class="stl-carrier-head">
       <span class="stl-col-carrier">{{localize "SHARETHELOAD.Column.Carrier"}}</span>
       <span class="stl-col-share stl-manual-only">{{localize "SHARETHELOAD.Column.Share"}}</span>
+      <span class="stl-col-cap">{{localize "SHARETHELOAD.Column.Capacity"}}</span>
       <span class="stl-col-weight">{{localize "SHARETHELOAD.Column.Weight"}}</span>
     </div>
 
     <ol class="stl-carriers">
       {{#each carriers}}
-      <li class="stl-carrier" data-str="{{this.str}}" data-cap="{{this.capacity}}" data-source="{{this.source}}">
+      <li class="stl-carrier" data-str="{{this.str}}" data-cap="{{this.capacity}}" data-carried="{{this.carried}}" data-enc="{{this.thresholds.enc}}" data-heavy="{{this.thresholds.heavy}}" data-max="{{this.thresholds.max}}" data-source="{{this.source}}">
         <label class="stl-carrier-label">
           <input type="checkbox" name="members.{{this.id}}" {{checked this.checked}}>
           <img src="{{this.img}}" alt="{{this.name}}" width="28" height="28">
@@ -86,6 +101,8 @@
         <div class="stl-slider">
           <input type="range" name="weights.{{this.id}}" min="0" max="100" step="1" value="{{this.weight}}">
         </div>
+
+        <span class="stl-carrier-cap">{{this.capacity}}</span>
 
         <span class="stl-carrier-share">
           <span class="stl-share-weight">{{this.share}}</span>
@@ -109,6 +126,7 @@
   </fieldset>
 
   <footer class="stl-footer">
+    <span class="stl-headroom"></span>
     <button type="submit" data-action="save">
       <i class="fa-solid fa-save"></i> {{localize "SHARETHELOAD.Button.Save"}}
     </button>

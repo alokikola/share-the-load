@@ -1,10 +1,10 @@
 import {
   MODULE_ID, STRATEGIES, getPileConfig, setPileConfig,
-  candidatePiles, carrierCandidates, isPile
+  candidatePiles, carrierCandidates, isPile, trackedLevels
 } from "../config.mjs";
-import { pileWeight, computeShares, carrierCapacity } from "../weight.mjs";
+import { pileWeightBreakdown, computeShares, carrierCapacity, carrierThresholds } from "../weight.mjs";
 import { syncPile, clearPile, assignedWeight } from "../effects.mjs";
-import { rebalance, normalize } from "../allocate.mjs";
+import { rebalance, normalize, headroom } from "../allocate.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -13,6 +13,13 @@ const SOURCE_LABELS = {
   group: "SHARETHELOAD.Source.Group",
   owned: "SHARETHELOAD.Source.Owned",
   configured: "SHARETHELOAD.Source.Configured"
+};
+
+/** Threshold names used in the headroom readout. */
+const LEVEL_LABELS = {
+  encumbered: "SHARETHELOAD.Level.Encumbered",
+  heavilyEncumbered: "SHARETHELOAD.Level.HeavilyEncumbered",
+  maximum: "SHARETHELOAD.Level.Maximum"
 };
 
 /**
@@ -74,6 +81,7 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
     const config = pile ? getPileConfig(pile) : null;
     const shares = pile ? computeShares(pile) : new Map();
     const candidates = pile ? carrierCandidates(pile) : [];
+    const breakdown = pile ? pileWeightBreakdown(pile, config) : { items: 0, coin: 0, total: 0, itemCount: 0, coinCount: 0 };
 
     // Whether this pile has ever been saved; drives roster pre-checking below.
     const configured = pile ? isPile(pile) : false;
@@ -90,9 +98,12 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
       pile,
       config,
       hasPile: !!pile,
-      total: pile ? pileWeight(pile, config) : 0,
+      total: breakdown.total,
+      breakdown,
+      showCoin: breakdown.coin > 0,
       hasCurrency: !!pile?.system?.currency,
       currencyRuleActive: game.settings.get("dnd5e", "currencyWeight"),
+      encumbranceOff: trackedLevels().length === 0,
       strategies: Object.entries(STRATEGIES).map(([value, label]) => ({
         value, label: game.i18n.localize(label), selected: config?.strategy === value
       })),
@@ -114,6 +125,12 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
           // without a round trip while the GM is still adjusting the form.
           str: Math.max(actor.system.abilities?.str?.value ?? 10, 1),
           capacity: Math.round(carrierCapacity(actor) * 10) / 10,
+          carried: Math.round((actor.system.attributes?.encumbrance?.value ?? 0) * 10) / 10,
+          thresholds: (() => { const t = carrierThresholds(actor); return {
+            enc: Math.round(t.encumbered * 10) / 10,
+            heavy: Math.round(t.heavilyEncumbered * 10) / 10,
+            max: Math.round(t.maximum * 10) / 10
+          }; })(),
           weight: Number(config?.weights?.[actor.id] ?? (isMember ? evenDefault : 0)),
           share: shares.get(actor.id) ?? 0,
           applied: assignedWeight(actor, this.#pileId)
@@ -238,8 +255,9 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
    * has just been enabled and holds no allocation yet.
    */
   #renormalize() {
-    // Inactive sliders stay enabled but inert: a disabled input is omitted from
-    // form submission, which would discard the stored allocation.
+    // Inactive sliders stay enabled but inert rather than disabled, so their value
+    // survives unchecking and re-checking within a single session. It is not kept
+    // across a save -- #onSubmit prunes allocations to actual carriers.
     for ( const row of this.element.querySelectorAll(".stl-carrier") ) {
       const checked = row.querySelector('input[type="checkbox"]').checked;
       row.classList.toggle("stl-inactive", !checked);
@@ -327,6 +345,48 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
       out.textContent = (Math.round(total * fraction * 10) / 10).toString();
       if ( pct ) pct.textContent = `${Math.round(fraction * 100)}%`;
     }
+
+    this.#refreshHeadroom(active, total, sum, fallback, basis);
+  }
+
+  /**
+   * Report how much more the pile can take before a carrier crosses a threshold.
+   * Recomputed alongside the share preview so it tracks the sliders live.
+   */
+  #refreshHeadroom(active, total, sum, fallback, basis) {
+    const el = this.element.querySelector(".stl-headroom");
+    if ( !el ) return;
+
+    const carriers = active.map(row => {
+      const fraction = fallback ? (1 / active.length) : (basis(row) / sum);
+      return {
+        name: row.querySelector(".stl-carrier-name").textContent.trim(),
+        carried: Number(row.dataset.carried || 0),
+        share: total * fraction,
+        thresholds: {
+          encumbered: Number(row.dataset.enc || 0),
+          heavilyEncumbered: Number(row.dataset.heavy || 0),
+          maximum: Number(row.dataset.max || 0)
+        }
+      };
+    });
+
+    const result = headroom(carriers, total, trackedLevels());
+    const label = entry => `${entry.name} (${game.i18n.localize(LEVEL_LABELS[entry.threshold])})`;
+
+    el.classList.toggle("stl-headroom-over", result.over);
+    if ( result.over ) {
+      el.textContent = game.i18n.format("SHARETHELOAD.Headroom.Over", {
+        who: result.limiting.map(e => e.name).join(", ")
+      });
+    } else if ( result.slack === null ) {
+      el.textContent = "";
+    } else {
+      el.textContent = game.i18n.format("SHARETHELOAD.Headroom.Room", {
+        amount: result.slack,
+        who: result.limiting.map(label).join(", ")
+      });
+    }
   }
 
   /* -------------------------------------------- */
@@ -348,11 +408,18 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
       strategy: data.strategy ?? "even",
       // Checkboxes and sliders are named members.<id> / weights.<id> so
       // FormDataExtended expands them into objects keyed by actor id.
-      members: Object.entries(data.members ?? {}).filter(([, v]) => v).map(([id]) => id),
-      weights: Object.fromEntries(
-        Object.entries(data.weights ?? {}).map(([id, v]) => [id, Number(v) || 0])
-      )
+      members: Object.entries(data.members ?? {}).filter(([, v]) => v).map(([id]) => id)
     };
+
+    // Prune allocations down to actual carriers. Every rendered row submits a
+    // slider value, so without this the flag accumulates an entry for every actor
+    // ever offered as a candidate -- mostly zeroes, plus stale figures for anyone
+    // plucked from the list. Only members are ever read, so the rest is dead weight.
+    config.weights = Object.fromEntries(
+      Object.entries(data.weights ?? {})
+        .filter(([id]) => config.members.includes(id))
+        .map(([id, v]) => [id, Number(v) || 0])
+    );
 
     await setPileConfig(pile, config);
 

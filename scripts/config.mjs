@@ -17,6 +17,26 @@ export const STRATEGIES = {
   manual: "SHARETHELOAD.Strategy.Manual"
 };
 
+/**
+ * The encumbrance levels that actually do something in this world.
+ *
+ * dnd5e computes all three thresholds no matter what, but only applies the
+ * encumbered / heavily encumbered speed penalties under the `variant` rule.
+ * Under `normal` a character can sail past "heavily encumbered" with no effect
+ * at all -- verified live, where a carrier 27 lb over that threshold still had
+ * full movement -- so only `maximum` is worth reporting. Under `none` nothing
+ * consumes encumbrance and this module has no effect on play.
+ *
+ * @returns {string[]}  Level keys, in the order they are crossed.
+ */
+export function trackedLevels() {
+  switch ( game.settings.get("dnd5e", "encumbrance") ) {
+    case "variant": return ["encumbered", "heavilyEncumbered", "maximum"];
+    case "normal": return ["maximum"];
+    default: return [];
+  }
+}
+
 /** Default per-pile configuration. */
 export const DEFAULT_CONFIG = {
   enabled: true,

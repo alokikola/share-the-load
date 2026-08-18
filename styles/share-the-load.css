@@ -50,7 +50,7 @@
 .share-the-load .stl-carrier,
 .share-the-load .stl-carrier-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 6.5rem;
+  grid-template-columns: minmax(0, 1fr) 4rem 6.5rem;
   align-items: center;
   gap: 0.5rem;
 }
@@ -62,7 +62,7 @@
    drag, and carrier names were truncating well before they needed to. */
 .share-the-load .stl-body[data-strategy="manual"] .stl-carrier,
 .share-the-load .stl-body[data-strategy="manual"] .stl-carrier-head {
-  grid-template-columns: minmax(0, 1fr) 7.2rem 6.5rem;
+  grid-template-columns: minmax(0, 1fr) 7.2rem 4rem 6.5rem;
 }
 
 .share-the-load .stl-carrier-head {
@@ -75,6 +75,7 @@
 }
 
 .share-the-load .stl-carrier-head .stl-col-share,
+.share-the-load .stl-carrier-head .stl-col-cap,
 .share-the-load .stl-carrier-head .stl-col-weight { text-align: right; }
 
 .share-the-load .stl-carriers {
@@ -223,3 +224,41 @@
 }
 
 .share-the-load .stl-info:hover { opacity: 0.9; }
+
+/* Carrying capacity, shown for every strategy: it explains why the shares differ. */
+.share-the-load .stl-carrier-cap {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.55;
+  font-size: var(--font-size-12, 12px);
+}
+
+/* Weight sources on one line. */
+.share-the-load .stl-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0 1rem;
+  font-size: var(--font-size-12, 12px);
+  opacity: 0.85;
+}
+
+.share-the-load .stl-metric { white-space: nowrap; }
+.share-the-load .stl-metric strong { font-variant-numeric: tabular-nums; }
+.share-the-load .stl-metric-total { font-weight: bold; opacity: 1; }
+
+/* Headroom readout, pushed left so the buttons stay right-aligned. */
+.share-the-load .stl-headroom {
+  margin-right: auto;
+  align-self: center;
+  font-size: var(--font-size-12, 12px);
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.share-the-load .stl-headroom.stl-headroom-over {
+  color: var(--color-level-error, #b34b4b);
+  opacity: 1;
+  font-weight: bold;
+}

@@ -25,28 +25,49 @@ function baseUnitFor(actor) {
  * @returns {number}
  */
 export function pileWeight(pile, config) {
+  return pileWeightBreakdown(pile, config).total;
+}
+
+/**
+ * A pile's weight split into its sources, for display.
+ *
+ * @param {Actor} pile
+ * @param {object} [config]  Pile config; re-read if omitted.
+ * @returns {{items: number, coin: number, total: number, itemCount: number, coinCount: number}}
+ */
+export function pileWeightBreakdown(pile, config) {
   const cfg = config ?? getPileConfig(pile);
   const target = baseUnitFor(pile);
 
-  let weight = pile.items
+  const items = pile.items
     .filter(item => !item.container)
     .reduce((total, item) => total + (item.system.totalWeightIn?.(target) ?? 0), 0);
 
   // Coin weight, only when the system's own currencyWeight rule is active.
+  let coin = 0;
+  let coinCount = 0;
   const currency = pile.system?.currency;
-  if ( cfg.includeCurrency && currency && game.settings.get("dnd5e", "currencyWeight") ) {
-    const encumbrance = CONFIG.DND5E.encumbrance;
-    const unitSystem = game.settings.get("dnd5e", "metricWeightUnits") ? "metric" : "imperial";
-    const numCoins = Object.values(currency).reduce((val, denom) => val + Math.max(denom, 0), 0);
-    let coinWeight = numCoins / encumbrance.currencyPerWeight[unitSystem];
-    // Coin weight arrives in the default base unit; convert only if the pile differs.
-    const from = encumbrance.baseUnits.default[unitSystem];
-    const convert = globalThis.dnd5e?.utils?.convertWeight;
-    if ( (from !== target) && convert ) coinWeight = convert(coinWeight, from, target);
-    weight += coinWeight;
+  if ( currency ) {
+    coinCount = Object.values(currency).reduce((val, denom) => val + Math.max(denom, 0), 0);
+    if ( cfg.includeCurrency && game.settings.get("dnd5e", "currencyWeight") ) {
+      const encumbrance = CONFIG.DND5E.encumbrance;
+      const unitSystem = game.settings.get("dnd5e", "metricWeightUnits") ? "metric" : "imperial";
+      coin = coinCount / encumbrance.currencyPerWeight[unitSystem];
+      // Coin weight arrives in the default base unit; convert only if the pile differs.
+      const from = encumbrance.baseUnits.default[unitSystem];
+      const convert = globalThis.dnd5e?.utils?.convertWeight;
+      if ( (from !== target) && convert ) coin = convert(coin, from, target);
+    }
   }
 
-  return round(weight);
+  return {
+    items: round(items),
+    coin: round(coin),
+    // Rounded from the unrounded sum, so the parts cannot disagree with the total.
+    total: round(items + coin),
+    itemCount: pile.items.size,
+    coinCount
+  };
 }
 
 /**
@@ -81,6 +102,34 @@ export function carrierCapacity(actor) {
   const str = actor.system.abilities?.str?.value ?? 10;
   const capacity = str * threshold * mod;
   return Number.isFinite(capacity) ? capacity : 0;
+}
+
+/**
+ * A carrier's three encumbrance thresholds BEFORE any share-the-load effect,
+ * reconstructed the same way as carrierCapacity and for the same reason.
+ *
+ * Vehicles are a special case in the system: their thresholds derive from cargo
+ * capacity and skip the per-threshold multipliers entirely, so all three levels
+ * coincide -- a vehicle is either within capacity or over it.
+ *
+ * @param {Actor} actor
+ * @returns {{encumbered: number, heavilyEncumbered: number, maximum: number}}
+ */
+export function carrierThresholds(actor) {
+  if ( actor.type === "vehicle" ) {
+    const cap = carrierCapacity(actor);
+    return { encumbered: cap, heavilyEncumbered: cap, maximum: cap };
+  }
+  const unitSystem = game.settings.get("dnd5e", "metricWeightUnits") ? "metric" : "imperial";
+  const config = CONFIG.DND5E.encumbrance.threshold ?? {};
+  const mod = actor.system.attributes?.encumbrance?.mod ?? 1;
+  const str = actor.system.abilities?.str?.value ?? 10;
+  const at = key => str * (config[key]?.[unitSystem] ?? 0) * mod;
+  return {
+    encumbered: at("encumbered"),
+    heavilyEncumbered: at("heavilyEncumbered"),
+    maximum: at("maximum")
+  };
 }
 
 /**

@@ -6,48 +6,48 @@
   "SHARETHELOAD.Source.Group": "group",
   "SHARETHELOAD.Source.Owned": "player-owned",
   "SHARETHELOAD.Source.Configured": "no longer eligible",
-
   "SHARETHELOAD.Legend.Distribution": "Distribution",
   "SHARETHELOAD.Legend.Carriers": "Carriers",
   "SHARETHELOAD.Column.Carrier": "Carrier",
   "SHARETHELOAD.Column.Share": "Share",
   "SHARETHELOAD.Column.Weight": "Weight",
-
+  "SHARETHELOAD.Column.Capacity": "Cap",
+  "SHARETHELOAD.Metric.Items": "Items",
+  "SHARETHELOAD.Metric.Coin": "Coin",
+  "SHARETHELOAD.Metric.Total": "Total",
+  "SHARETHELOAD.Level.Encumbered": "encumbered",
+  "SHARETHELOAD.Level.HeavilyEncumbered": "heavily encumbered",
+  "SHARETHELOAD.Level.Maximum": "over capacity",
+  "SHARETHELOAD.Headroom.Room": "Room for {amount} more, then {who}",
+  "SHARETHELOAD.Headroom.Over": "Over capacity: {who}",
   "SHARETHELOAD.Field.Pile": "Loot Actor",
   "SHARETHELOAD.Field.Enabled": "Distribute This Pile",
   "SHARETHELOAD.Field.Strategy": "Split Method",
   "SHARETHELOAD.Field.IncludeCurrency": "Include Coin Weight",
-  "SHARETHELOAD.Field.TotalWeight": "Total pile weight",
   "SHARETHELOAD.Field.Allocated": "Allocated",
-
   "SHARETHELOAD.Hint.Pile": "Each loot actor keeps its own independent carrier list, so a character may carry shares from several piles at once.",
   "SHARETHELOAD.Hint.Carriers": "Listed are this loot actor's group members first, then any actor a player owns. To let an NPC such as a mule or hireling share the load, give the players ownership of it. Checked carriers have this pile's weight counted against their carrying capacity; the items never leave the loot actor.",
   "SHARETHELOAD.Hint.Manual": "Sliders always total 100%. Moving one redistributes the remainder across the others, keeping their proportions to each other.",
   "SHARETHELOAD.Hint.CurrencyRuleOff": "The dnd5e \"Apply Currency Weight\" rule is off, so coin weight is ignored regardless of this setting.",
-
   "SHARETHELOAD.Strategy.Even": "Evenly between carriers",
   "SHARETHELOAD.Strategy.Strength": "Weighted by Strength score",
   "SHARETHELOAD.Strategy.Capacity": "Weighted by carrying capacity",
   "SHARETHELOAD.Strategy.Manual": "Manually, with sliders",
-
   "SHARETHELOAD.Button.EvenOut": "Even Out",
   "SHARETHELOAD.Button.Save": "Save",
   "SHARETHELOAD.Button.Apply": "Save & Apply",
   "SHARETHELOAD.Button.Clear": "Remove Effects",
-
   "SHARETHELOAD.Notify.Saved": "Carrier configuration saved.",
   "SHARETHELOAD.Notify.Applied": "Distributed {pile} across its carriers.",
   "SHARETHELOAD.Notify.Cleared": "Removed this pile's shared load effects.",
-
   "SHARETHELOAD.NoPiles": "No group actors found. Create a group actor to use as a party loot pile.",
   "SHARETHELOAD.NoCarriers": "No eligible carriers. Add members to this group actor, or give a player ownership of an actor.",
-
   "SHARETHELOAD.EffectName": "Shared Load: {pile}",
   "SHARETHELOAD.EffectDescription": "Carrying a {weight} share of the load from {pile}.",
-
   "SHARETHELOAD.Setting.AutoSync.Name": "Recalculate Automatically",
   "SHARETHELOAD.Setting.AutoSync.Hint": "Update carried shares whenever a configured loot actor's contents change. Turn off to apply only manually.",
   "SHARETHELOAD.Setting.Menu.Name": "Carrier Configuration",
   "SHARETHELOAD.Setting.Menu.Hint": "Choose which characters share the weight of each party loot actor.",
-  "SHARETHELOAD.Setting.Menu.Label": "Configure Carriers"
+  "SHARETHELOAD.Setting.Menu.Label": "Configure Carriers",
+  "SHARETHELOAD.Warn.EncumbranceOff": "This world has encumbrance tracking disabled, so distributed weight will have no effect in play. Enable it under the dnd5e system settings."
 }

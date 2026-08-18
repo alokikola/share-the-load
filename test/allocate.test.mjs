@@ -2,7 +2,7 @@
  * Tests for the pure slider allocation maths. No Foundry, no DOM.
  *   node test/allocate.test.mjs
  */
-import { rebalance, normalize, apportionIntegers } from "../scripts/allocate.mjs";
+import { rebalance, normalize, apportionIntegers, headroom } from "../scripts/allocate.mjs";
 
 let pass = 0, fail = 0;
 
@@ -90,6 +90,70 @@ console.log("\nrebalance - stability (the anti-wiggle property)");
   const back = rebalance(base, 2, 25);
   check("dragging away and back restores the original", back, base);
   assert("the intermediate state was still valid", sum(moved) === 100);
+}
+
+
+console.log("\nheadroom");
+const T = (e, h, m) => ({ encumbered: e, heavilyEncumbered: h, maximum: m });
+{
+  // Equal shares; A sits nearer their next threshold, so A binds.
+  const r = headroom([
+    { name: "A", carried: 40, share: 10, thresholds: T(50, 100, 150) },
+    { name: "B", carried: 10, share: 10, thresholds: T(50, 100, 150) }
+  ], 20);
+  check("names the binding carrier", r.limiting.map(l => l.name), ["A"]);
+  check("reports the threshold they hit", r.limiting[0].threshold, "encumbered");
+  // A has 50-10-40 = 0 room while absorbing half of anything new.
+  check("slack accounts for the carrier's fraction", r.slack, 0);
+}
+{
+  const r = headroom([
+    { name: "A", carried: 30, share: 10, thresholds: T(50, 100, 150) },
+    { name: "B", carried: 30, share: 10, thresholds: T(50, 100, 150) }
+  ], 20);
+  check("ties list every affected carrier", r.limiting.map(l => l.name), ["A", "B"]);
+}
+{
+  // Already heavily encumbered by their own gear: measured against maximum.
+  const r = headroom([{ name: "A", carried: 110, share: 10, thresholds: T(50, 100, 150) }], 10);
+  check("levels already crossed are skipped", r.limiting[0].threshold, "maximum");
+  assert("a pre-existing state is not raised as an alarm", r.over === false);
+}
+{
+  const r = headroom([{ name: "A", carried: 200, share: 10, thresholds: T(50, 100, 150) }], 10);
+  assert("past maximum reports overloaded", r.over === true && r.limiting[0].name === "A");
+}
+{
+  // A carrier taking nothing never crosses, so must not bind the result.
+  const r = headroom([
+    { name: "Idle", carried: 49, share: 0, thresholds: T(50, 100, 150) },
+    { name: "Real", carried: 0, share: 10, thresholds: T(50, 100, 150) }
+  ], 10);
+  check("zero-share carriers are ignored", r.limiting.map(l => l.name), ["Real"]);
+}
+
+
+console.log("\nheadroom - basic vs variant rules");
+{
+  const T2 = (e, h, m) => ({ encumbered: e, heavilyEncumbered: h, maximum: m });
+  // Carrier is past encumbered and heavily encumbered, but well under maximum.
+  const carrier = [{ name: "A", carried: 110, share: 10, thresholds: T2(50, 100, 150) }];
+  const variant = headroom(carrier, 10, ["encumbered", "heavilyEncumbered", "maximum"]);
+  const basic = headroom(carrier, 10, ["maximum"]);
+  check("variant measures against maximum once the others are crossed", variant.limiting[0].threshold, "maximum");
+  check("basic measures against maximum only", basic.limiting[0].threshold, "maximum");
+
+  // Below every threshold: variant warns about `encumbered`, basic about capacity.
+  const light = [{ name: "B", carried: 10, share: 10, thresholds: T2(50, 100, 150) }];
+  check("variant names the first line crossed", headroom(light, 10, ["encumbered", "heavilyEncumbered", "maximum"]).limiting[0].threshold, "encumbered");
+  check("basic ignores lines the world does not apply", headroom(light, 10, ["maximum"]).limiting[0].threshold, "maximum");
+  assert("basic reports more room than variant",
+    headroom(light, 10, ["maximum"]).slack > headroom(light, 10, ["encumbered", "heavilyEncumbered", "maximum"]).slack);
+}
+{
+  const T2 = (e, h, m) => ({ encumbered: e, heavilyEncumbered: h, maximum: m });
+  const r = headroom([{ name: "A", carried: 10, share: 10, thresholds: T2(50, 100, 150) }], 10, []);
+  assert("no tracked levels yields nothing to report", r.slack === null && r.limiting.length === 0 && r.over === false);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
