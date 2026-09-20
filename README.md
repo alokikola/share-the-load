@@ -65,21 +65,6 @@ five times slower than one on 50%. Ties list everyone.
 The header row shows each carrier's capacity, their share, and its percentage. The
 line above the list splits the pile's weight into items and coin.
 
-## It depends on your encumbrance rule
-
-dnd5e has three settings: **none**, **normal** and **variant**.
-
-* **variant** — all three thresholds apply, with speed penalties. Distributed weight
-  can push someone to *encumbered* or *heavily encumbered*.
-* **normal** — only maximum capacity does anything. The intermediate thresholds are
-  still calculated but have no mechanical effect, so headroom is measured against
-  capacity alone.
-* **none** — nothing consumes encumbrance and this module cannot affect play. The
-  config warns you if the world is set this way.
-
-On one real party the two readings differed by five
-times and named different carriers as the constraint.
-
 
 ## How it works
 
