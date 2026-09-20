@@ -77,18 +77,9 @@ dnd5e has three settings: **none**, **normal** and **variant**.
 * **none** — nothing consumes encumbrance and this module cannot affect play. The
   config warns you if the world is set this way.
 
-The difference is not cosmetic. On one real party the two readings differed by five
+On one real party the two readings differed by five
 times and named different carriers as the constraint.
 
-## Removing it
-
-**Settings → Share the Load → Remove All Effects** before disabling or uninstalling.
-
-This matters. The effect targets a dnd5e field, so the *system* applies it — not
-this module. Disable the module without clearing first and every carrier keeps their
-reduced capacity permanently, with nothing left in the interface to explain why.
-
-Pile configurations survive the purge, so you can re-apply afterwards.
 
 ## How it works
 
