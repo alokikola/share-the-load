@@ -12,46 +12,46 @@
 
 const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
 
-/** Every threshold level, in the order a carrier crosses them. */
+/** Every threshold level, in the order a bearer crosses them. */
 export const ALL_LEVELS = ["encumbered", "heavilyEncumbered", "maximum"];
 
 /**
- * How much more weight the pile can absorb before some carrier crosses their next
- * encumbrance threshold, and who that carrier is.
+ * How much more weight the pile can absorb before some bearer crosses their next
+ * encumbrance threshold, and who that bearer is.
  *
- * A carrier only absorbs their fraction of new loot, so the pile can grow by
- * `their headroom / their fraction` before they cross. The binding carrier is
+ * A bearer only absorbs their fraction of new loot, so the pile can grow by
+ * `their headroom / their fraction` before they cross. The binding bearer is
  * whoever yields the smallest such figure -- not simply whoever is nearest a
- * threshold, since a carrier taking a small share approaches it slowly.
+ * threshold, since a bearer taking a small share approaches it slowly.
  *
  * "Next threshold" means the first one they have NOT already crossed. Someone
  * already heavily encumbered by their own gear is measured against `maximum`,
  * so their pre-existing state is not reported as an alarm.
  *
  * @param {Array<{name: string, carried: number, share: number,
- *                thresholds: {encumbered: number, heavilyEncumbered: number, maximum: number}}>} carriers
+ *                thresholds: {encumbered: number, heavilyEncumbered: number, maximum: number}}>} bearers
  * @param {number} total  Current pile weight.
  * @param {string[]} [levels=ALL_LEVELS]  Levels this world actually applies. Under
- *   the basic rule only `maximum` does anything, so reporting a carrier as nearing
+ *   the basic rule only `maximum` does anything, so reporting a bearer as nearing
  *   "heavily encumbered" would name a line with no mechanical effect.
  * @returns {{slack: number|null, limiting: Array<{name: string, threshold: string}>, over: boolean}}
  */
-export function headroom(carriers, total, levels = ALL_LEVELS) {
+export function headroom(bearers, total, levels = ALL_LEVELS) {
   const over = [];
   const constrained = [];
   if ( !levels.length ) return { slack: null, limiting: [], over: false };
 
   const last = levels[levels.length - 1];
 
-  for ( const c of carriers ) {
-    // Thresholds shift down by whatever this carrier already shoulders.
+  for ( const c of bearers ) {
+    // Thresholds shift down by whatever this bearer already shoulders.
     const level = levels.find(k => c.carried <= (c.thresholds[k] - c.share));
     if ( !level ) {
       over.push({ name: c.name, threshold: last });
       continue;
     }
     const room = (c.thresholds[level] - c.share) - c.carried;
-    // A carrier taking no share never crosses as the pile grows.
+    // A bearer taking no share never crosses as the pile grows.
     const fraction = total > 0 ? c.share / total : 0;
     if ( fraction <= 0 ) continue;
     constrained.push({ name: c.name, threshold: level, slack: room / fraction });

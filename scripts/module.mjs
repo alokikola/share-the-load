@@ -1,4 +1,4 @@
-import { MODULE_ID, isPile, getPileConfig, candidatePiles, CARRIER_TYPES } from "./config.mjs";
+import { MODULE_ID, isPile, getPileConfig, candidatePiles, BEARER_TYPES } from "./config.mjs";
 import { syncPile, syncAll, clearPile, purgeAllEffects } from "./effects.mjs";
 import { pileWeight, computeShares } from "./weight.mjs";
 import ShareConfigApp from "./apps/share-config.mjs";
@@ -26,7 +26,7 @@ function queueSync(pile) {
   pending.get(pile.id)();
 }
 
-/** Piles whose share maths depend on a given carrier's Strength. */
+/** Piles whose share maths depend on a given bearer's Strength. */
 function pilesWeightedBy(actorId) {
   return candidatePiles().filter(p => {
     const cfg = getPileConfig(p);
@@ -86,7 +86,7 @@ Hooks.once("ready", async () => {
 /* -------------------------------------------- */
 
 /**
- * A range input changes value on wheel, so scrolling the carrier list past a
+ * A range input changes value on wheel, so scrolling the bearer list past a
  * slider silently re-weights the party -- a real hazard, since the change is
  * invisible until someone hits Apply.
  *
@@ -96,7 +96,7 @@ Hooks.once("ready", async () => {
  * preventDefault from there is too late. Verified against a live world: an
  * element-level guard let the value change anyway, while this stops it dead.
  *
- * The scroll is forwarded to the carrier list so the list still scrolls normally --
+ * The scroll is forwarded to the bearer list so the list still scrolls normally --
  * swallowing the event outright would make the list unscrollable wherever a slider
  * sits under the cursor, which is most of it.
  *
@@ -107,7 +107,7 @@ function guardSliderWheel(event) {
   if ( (slider?.type !== "range") || !slider.closest?.(`.${MODULE_ID}`) ) return;
   event.preventDefault();
   event.stopImmediatePropagation();
-  const list = slider.closest(".stl-carriers");
+  const list = slider.closest(".stl-bearers");
   if ( list ) list.scrollTop += event.deltaY;
 }
 
@@ -122,8 +122,8 @@ for ( const hook of ["createItem", "updateItem", "deleteItem"] ) {
 Hooks.on("updateActor", (actor, changes) => {
   // Pile contents can change without touching items: currency, or our own config.
   if ( isPile(actor) && (changes.system?.currency || changes.flags?.[MODULE_ID]) ) queueSync(actor);
-  // A carrier's Strength changing reweights any strength-based pile it belongs to.
-  if ( CARRIER_TYPES.includes(actor.type) && changes.system?.abilities?.str ) {
+  // A bearer's Strength changing reweights any strength-based pile it belongs to.
+  if ( BEARER_TYPES.includes(actor.type) && changes.system?.abilities?.str ) {
     for ( const pile of pilesWeightedBy(actor.id) ) queueSync(pile);
   }
 });

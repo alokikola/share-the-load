@@ -8,12 +8,12 @@ function isActingGM() {
   return game.users.activeGM?.isSelf === true;
 }
 
-/** All of our effects for a given pile on a given carrier. Normally 0 or 1. */
+/** All of our effects for a given pile on a given bearer. Normally 0 or 1. */
 function findEffects(actor, pileId) {
   return actor.effects.filter(e => e.getFlag(MODULE_ID, "pile") === pileId);
 }
 
-/** Find our effect for a given pile on a given carrier. */
+/** Find our effect for a given pile on a given bearer. */
 function findEffect(actor, pileId) {
   return findEffects(actor, pileId)[0] ?? null;
 }
@@ -66,8 +66,8 @@ function effectData(pile, weight) {
 }
 
 /**
- * Bring every carrier's effect in line with one pile's current contents.
- * Carriers no longer configured have their effect for this pile removed.
+ * Bring every bearer's effect in line with one pile's current contents.
+ * Bearers no longer configured have their effect for this pile removed.
  * @param {Actor} pile
  */
 export async function syncPile(pile) {
@@ -93,13 +93,13 @@ async function syncPileNow(pile) {
   const shares = computeShares(pile);
 
   // Deliberately unfiltered by actor type: `shares` already contains only valid
-  // carriers, and sweeping every actor is what removes a stale effect from someone
+  // bearers, and sweeping every actor is what removes a stale effect from someone
   // who is no longer eligible to carry at all.
   for ( const actor of game.actors ) {
     const found = findEffects(actor, pile.id);
     const owed = shares.get(actor.id) ?? 0;
 
-    // Self-heal: a carrier should never hold more than one effect per pile, but an
+    // Self-heal: a bearer should never hold more than one effect per pile, but an
     // earlier race could have left duplicates stacking a doubled penalty.
     if ( found.length > 1 ) {
       const extras = found.slice(1).map(e => e.id);
@@ -151,7 +151,7 @@ export async function clearPile(pileId) {
  *
  * This is the uninstall path, and it matters: the effect targets a dnd5e field, so
  * the SYSTEM applies it, not us. Disabling or deleting this module would otherwise
- * leave every carrier permanently weakened with nothing left to explain why.
+ * leave every bearer permanently weakened with nothing left to explain why.
  *
  * @returns {Promise<number>}  How many effects were removed.
  */
@@ -167,7 +167,7 @@ export async function purgeAllEffects() {
   return removed;
 }
 
-/** Weight currently assigned to a carrier by a given pile, for display. */
+/** Weight currently assigned to a bearer by a given pile, for display. */
 export function assignedWeight(actor, pileId) {
   return findEffect(actor, pileId)?.getFlag(MODULE_ID, "weight") ?? 0;
 }

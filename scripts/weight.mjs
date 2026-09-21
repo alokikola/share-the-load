@@ -1,4 +1,4 @@
-import { getPileConfig, CARRIER_TYPES } from "./config.mjs";
+import { getPileConfig, BEARER_TYPES } from "./config.mjs";
 
 /**
  * Resolve the weight unit an actor's encumbrance is measured in, mirroring
@@ -71,7 +71,7 @@ export function pileWeightBreakdown(pile, config) {
 }
 
 /**
- * A carrier's carrying capacity, BEFORE any share-the-load effect is applied.
+ * A bearer's carrying capacity, BEFORE any share-the-load effect is applied.
  *
  * Deliberately not read from `encumbrance.max`: our own effect reduces that, so
  * weighting by it would feed the output back into the input and oscillate.
@@ -79,12 +79,12 @@ export function pileWeightBreakdown(pile, config) {
  * writes `bonuses` while `mod` derives only from size and `multipliers`.
  *
  * Verified against a live world: str x 15 x mod reproduces `max` exactly for
- * Tiny (mod 0.5), Medium (1) and Large (2) carriers.
+ * Tiny (mod 0.5), Medium (1) and Large (2) bearers.
  *
  * @param {Actor} actor
  * @returns {number}  Capacity in the actor's base weight unit, or 0 if unknown.
  */
-export function carrierCapacity(actor) {
+export function bearerCapacity(actor) {
   const unitSystem = game.settings.get("dnd5e", "metricWeightUnits") ? "metric" : "imperial";
 
   if ( actor.type === "vehicle" ) {
@@ -105,8 +105,8 @@ export function carrierCapacity(actor) {
 }
 
 /**
- * A carrier's three encumbrance thresholds BEFORE any share-the-load effect,
- * reconstructed the same way as carrierCapacity and for the same reason.
+ * A bearer's three encumbrance thresholds BEFORE any share-the-load effect,
+ * reconstructed the same way as bearerCapacity and for the same reason.
  *
  * Vehicles are a special case in the system: their thresholds derive from cargo
  * capacity and skip the per-threshold multipliers entirely, so all three levels
@@ -115,9 +115,9 @@ export function carrierCapacity(actor) {
  * @param {Actor} actor
  * @returns {{encumbered: number, heavilyEncumbered: number, maximum: number}}
  */
-export function carrierThresholds(actor) {
+export function bearerThresholds(actor) {
   if ( actor.type === "vehicle" ) {
-    const cap = carrierCapacity(actor);
+    const cap = bearerCapacity(actor);
     return { encumbered: cap, heavilyEncumbered: cap, maximum: cap };
   }
   const unitSystem = game.settings.get("dnd5e", "metricWeightUnits") ? "metric" : "imperial";
@@ -133,34 +133,34 @@ export function carrierThresholds(actor) {
 }
 
 /**
- * Split a pile's weight across its configured carriers.
+ * Split a pile's weight across its configured bearers.
  *
  * Strategies:
  *  - `even`     equal shares.
  *  - `strength` proportional to raw Strength score. Deliberately NOT proportional
  *               to `encumbrance.max`: our own effect reduces that value, so using
  *               it would feed the output back into the input and oscillate.
- *  - `manual`   proportional to the per-carrier weights set with the sliders.
+ *  - `manual`   proportional to the per-bearer weights set with the sliders.
  *               Stored as relative numbers and normalised here, so the whole pile
  *               is always accounted for even if the sliders don't total 100.
  *
  * @param {Actor} pile
- * @returns {Map<string, number>}  Carrier actor id -> weight owed, in the pile's base unit.
+ * @returns {Map<string, number>}  Bearer actor id -> weight owed, in the pile's base unit.
  */
 export function computeShares(pile) {
   const cfg = getPileConfig(pile);
   const shares = new Map();
   if ( !cfg.enabled ) return shares;
 
-  const carriers = cfg.members
+  const bearers = cfg.members
     .map(id => game.actors.get(id))
-    .filter(a => CARRIER_TYPES.includes(a?.type));
-  if ( !carriers.length ) return shares;
+    .filter(a => BEARER_TYPES.includes(a?.type));
+  if ( !bearers.length ) return shares;
 
   const total = pileWeight(pile, cfg);
   if ( total <= 0 ) return shares;
 
-  const raw = apportion(total, carriers, cfg);
+  const raw = apportion(total, bearers, cfg);
 
   // Rounding to a tenth loses or gains a little; push the drift onto the largest
   // share so the distributed weights always add up to the pile's actual weight.
@@ -172,41 +172,41 @@ export function computeShares(pile) {
     rounded[largest] = round(rounded[largest] + drift);
   }
 
-  carriers.forEach((actor, i) => shares.set(actor.id, rounded[i]));
+  bearers.forEach((actor, i) => shares.set(actor.id, rounded[i]));
   return shares;
 }
 
 /**
- * Unrounded share for each carrier, per the configured strategy.
+ * Unrounded share for each bearer, per the configured strategy.
  * @param {number} total
- * @param {Actor[]} carriers
+ * @param {Actor[]} bearers
  * @param {object} cfg
  * @returns {number[]}
  */
-function apportion(total, carriers, cfg) {
+function apportion(total, bearers, cfg) {
   if ( cfg.strategy === "manual" ) {
-    const weights = carriers.map(a => Math.max(Number(cfg.weights?.[a.id] ?? 0), 0));
+    const weights = bearers.map(a => Math.max(Number(cfg.weights?.[a.id] ?? 0), 0));
     const sum = weights.reduce((a, b) => a + b, 0);
     // All sliders at zero is not a meaningful instruction; fall back to even.
-    if ( sum > 0 ) return carriers.map((a, i) => total * (weights[i] / sum));
+    if ( sum > 0 ) return bearers.map((a, i) => total * (weights[i] / sum));
   } else if ( cfg.strategy === "capacity" ) {
-    // Proportional to what each carrier can actually hold, so everyone ends up at
+    // Proportional to what each bearer can actually hold, so everyone ends up at
     // the same percentage of their limit. This is what keeps a familiar safe: an
     // owl's capacity is a fraction of a PC's, so it receives a fraction of the load
     // rather than an even share that would drive its thresholds negative.
-    const weights = carriers.map(carrierCapacity);
+    const weights = bearers.map(bearerCapacity);
     const sum = weights.reduce((a, b) => a + b, 0);
-    // A carrier of unknown capacity (0) would silently receive nothing, so only
-    // trust this split when every carrier reports a usable figure.
+    // A bearer of unknown capacity (0) would silently receive nothing, so only
+    // trust this split when every bearer reports a usable figure.
     if ( (sum > 0) && weights.every(w => w > 0) ) {
-      return carriers.map((a, i) => total * (weights[i] / sum));
+      return bearers.map((a, i) => total * (weights[i] / sum));
     }
   } else if ( cfg.strategy === "strength" ) {
-    const weights = carriers.map(a => Math.max(a.system.abilities?.str?.value ?? 10, 1));
+    const weights = bearers.map(a => Math.max(a.system.abilities?.str?.value ?? 10, 1));
     const sum = weights.reduce((a, b) => a + b, 0);
-    return carriers.map((a, i) => total * (weights[i] / sum));
+    return bearers.map((a, i) => total * (weights[i] / sum));
   }
-  return carriers.map(() => total / carriers.length);
+  return bearers.map(() => total / bearers.length);
 }
 
 /** Round to one decimal, matching the precision the system displays. */

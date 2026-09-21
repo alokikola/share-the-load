@@ -1,8 +1,8 @@
 import {
   MODULE_ID, STRATEGIES, getPileConfig, setPileConfig,
-  candidatePiles, carrierCandidates, isPile, trackedLevels
+  candidatePiles, bearerCandidates, isPile, trackedLevels
 } from "../config.mjs";
-import { pileWeightBreakdown, computeShares, carrierCapacity, carrierThresholds } from "../weight.mjs";
+import { pileWeightBreakdown, computeShares, bearerCapacity, bearerThresholds } from "../weight.mjs";
 import { syncPile, clearPile, assignedWeight } from "../effects.mjs";
 import { rebalance, normalize, headroom } from "../allocate.mjs";
 
@@ -23,7 +23,7 @@ const LEVEL_LABELS = {
 };
 
 /**
- * Per-pile carrier configuration. Opened either from the settings menu (no pile
+ * Per-pile bearer configuration. Opened either from the settings menu (no pile
  * preselected) or from a group actor sheet's header controls (pile preselected).
  *
  * In manual mode the sliders behave as a single allocation: they always total
@@ -56,7 +56,7 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
       resizable: true
     },
     // An explicit height rather than "auto": with auto the window grows to fit the
-    // carrier list and pushes the footer buttons off the bottom. Bounded height plus
+    // bearer list and pushes the footer buttons off the bottom. Bounded height plus
     // a scrolling list keeps Save/Apply reachable at any party size.
     position: { width: 560, height: 640 },
     form: {
@@ -80,7 +80,7 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
     const pile = this.#pileId ? game.actors.get(this.#pileId) : null;
     const config = pile ? getPileConfig(pile) : null;
     const shares = pile ? computeShares(pile) : new Map();
-    const candidates = pile ? carrierCandidates(pile) : [];
+    const candidates = pile ? bearerCandidates(pile) : [];
     const breakdown = pile ? pileWeightBreakdown(pile, config) : { items: 0, coin: 0, total: 0, itemCount: 0, coinCount: 0 };
 
     // Whether this pile has ever been saved; drives roster pre-checking below.
@@ -88,7 +88,7 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
     const checkedFor = ({ actor, source }) =>
       configured ? config.members.includes(actor.id) : (source === "group");
 
-    // A carrier with no stored allocation starts at an even share of whatever
+    // A bearer with no stored allocation starts at an even share of whatever
     // set is checked, which on a fresh pile is the group roster rather than [].
     const memberCount = candidates.filter(checkedFor).length;
     const evenDefault = memberCount ? Math.round(100 / memberCount) : 0;
@@ -107,7 +107,7 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
       strategies: Object.entries(STRATEGIES).map(([value, label]) => ({
         value, label: game.i18n.localize(label), selected: config?.strategy === value
       })),
-      carriers: candidates.map(candidate => {
+      bearers: candidates.map(candidate => {
         const { actor, source } = candidate;
         // Until a pile has been saved even once, pre-check its group roster so the
         // common case needs no clicking. After that the stored list wins even when
@@ -124,9 +124,9 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
           // Raw Strength is exposed so the preview can be recalculated client-side
           // without a round trip while the GM is still adjusting the form.
           str: Math.max(actor.system.abilities?.str?.value ?? 10, 1),
-          capacity: Math.round(carrierCapacity(actor) * 10) / 10,
+          capacity: Math.round(bearerCapacity(actor) * 10) / 10,
           carried: Math.round((actor.system.attributes?.encumbrance?.value ?? 0) * 10) / 10,
-          thresholds: (() => { const t = carrierThresholds(actor); return {
+          thresholds: (() => { const t = bearerThresholds(actor); return {
             enc: Math.round(t.encumbered * 10) / 10,
             heavy: Math.round(t.heavilyEncumbered * 10) / 10,
             max: Math.round(t.maximum * 10) / 10
@@ -162,8 +162,8 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
       this.#refreshPreview();
     });
 
-    // Adding or removing a carrier changes the denominator, so re-spread to 100%.
-    root.querySelectorAll('.stl-carrier input[type="checkbox"]').forEach(box => {
+    // Adding or removing a bearer changes the denominator, so re-spread to 100%.
+    root.querySelectorAll('.stl-bearer input[type="checkbox"]').forEach(box => {
       box.addEventListener("change", () => {
         this.#renormalize();
         this.#refreshPreview();
@@ -174,7 +174,7 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
     // computed from the values captured when the drag began -- deriving from the
     // live values instead lets rounding error accumulate and the sliders visibly
     // wander while you hold the mouse down.
-    root.querySelectorAll('.stl-carrier input[type="range"]').forEach(slider => {
+    root.querySelectorAll('.stl-bearer input[type="range"]').forEach(slider => {
       slider.addEventListener("pointerdown", () => this.#captureBaseline(slider));
       slider.addEventListener("keydown", () => this.#captureBaseline(slider));
       slider.addEventListener("input", event => {
@@ -190,7 +190,7 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
 
     root.querySelector('[data-action="evenOut"]')?.addEventListener("click", event => {
       event.preventDefault();
-      // Zeroing first makes #renormalize reseed every carrier with an even share.
+      // Zeroing first makes #renormalize reseed every bearer with an even share.
       this.#activeRows().forEach(row => { this.#slider(row).value = 0; });
       this.#renormalize();
       this.#refreshPreview();
@@ -212,9 +212,9 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
   /*  Slider allocation                           */
   /* -------------------------------------------- */
 
-  /** Carrier rows currently sharing this pile. */
+  /** Bearer rows currently sharing this pile. */
   #activeRows() {
-    return Array.from(this.element.querySelectorAll(".stl-carrier"))
+    return Array.from(this.element.querySelectorAll(".stl-bearer"))
       .filter(row => row.querySelector('input[type="checkbox"]').checked);
   }
 
@@ -230,18 +230,18 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
    */
   #captureBaseline(slider) {
     const rows = this.#activeRows();
-    const index = rows.indexOf(slider.closest(".stl-carrier"));
+    const index = rows.indexOf(slider.closest(".stl-bearer"));
     this.#dragBaseline = (index < 0) ? null : {
       rows, index, values: rows.map(row => Number(this.#slider(row).value))
     };
   }
 
   /**
-   * Absorb a slider's movement into the other carriers, keeping the set at 100%.
+   * Absorb a slider's movement into the other bearers, keeping the set at 100%.
    * @param {HTMLInputElement} slider
    */
   #applyDrag(slider) {
-    const row = slider.closest(".stl-carrier");
+    const row = slider.closest(".stl-bearer");
     // Keyboard adjustment, or a drag that began before this row was active.
     if ( !this.#dragBaseline?.rows.includes(row) ) this.#captureBaseline(slider);
     const baseline = this.#dragBaseline;
@@ -251,14 +251,14 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
   }
 
   /**
-   * Re-spread the active carriers to total exactly 100%, seeding any carrier that
+   * Re-spread the active bearers to total exactly 100%, seeding any bearer that
    * has just been enabled and holds no allocation yet.
    */
   #renormalize() {
     // Inactive sliders stay enabled but inert rather than disabled, so their value
     // survives unchecking and re-checking within a single session. It is not kept
-    // across a save -- #onSubmit prunes allocations to actual carriers.
-    for ( const row of this.element.querySelectorAll(".stl-carrier") ) {
+    // across a save -- #onSubmit prunes allocations to actual bearers.
+    for ( const row of this.element.querySelectorAll(".stl-bearer") ) {
       const checked = row.querySelector('input[type="checkbox"]').checked;
       row.classList.toggle("stl-inactive", !checked);
     }
@@ -266,7 +266,7 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
     const rows = this.#activeRows();
     if ( !rows.length ) return this.#updateSum(0);
 
-    // A carrier that was just checked holds nothing yet; seed it with an even share
+    // A bearer that was just checked holds nothing yet; seed it with an even share
     // so enabling someone actually gives them load.
     const even = 100 / rows.length;
     const seeded = rows.map(row => {
@@ -316,7 +316,7 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
     if ( !body ) return;
     const total = Number(body.dataset.total ?? 0);
     const strategy = body.dataset.strategy;
-    const rows = Array.from(this.element.querySelectorAll(".stl-carrier"));
+    const rows = Array.from(this.element.querySelectorAll(".stl-bearer"));
     const active = this.#activeRows();
 
     const basis = row => {
@@ -326,7 +326,7 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
       return 1;
     };
 
-    // Mirrors apportion(): a capacity split is only trusted when every carrier
+    // Mirrors apportion(): a capacity split is only trusted when every bearer
     // reports a usable figure, otherwise it falls back to an even share.
     const usable = (strategy !== "capacity") || active.every(row => Number(row.dataset.cap) > 0);
     const sum = usable ? active.reduce((acc, row) => acc + basis(row), 0) : 0;
@@ -350,17 +350,17 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
   }
 
   /**
-   * Report how much more the pile can take before a carrier crosses a threshold.
+   * Report how much more the pile can take before a bearer crosses a threshold.
    * Recomputed alongside the share preview so it tracks the sliders live.
    */
   #refreshHeadroom(active, total, sum, fallback, basis) {
     const el = this.element.querySelector(".stl-headroom");
     if ( !el ) return;
 
-    const carriers = active.map(row => {
+    const bearers = active.map(row => {
       const fraction = fallback ? (1 / active.length) : (basis(row) / sum);
       return {
-        name: row.querySelector(".stl-carrier-name").textContent.trim(),
+        name: row.querySelector(".stl-bearer-name").textContent.trim(),
         carried: Number(row.dataset.carried || 0),
         share: total * fraction,
         thresholds: {
@@ -371,7 +371,7 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
       };
     });
 
-    const result = headroom(carriers, total, trackedLevels());
+    const result = headroom(bearers, total, trackedLevels());
     const label = entry => `${entry.name} (${game.i18n.localize(LEVEL_LABELS[entry.threshold])})`;
 
     el.classList.toggle("stl-headroom-over", result.over);
@@ -411,7 +411,7 @@ export default class ShareConfigApp extends HandlebarsApplicationMixin(Applicati
       members: Object.entries(data.members ?? {}).filter(([, v]) => v).map(([id]) => id)
     };
 
-    // Prune allocations down to actual carriers. Every rendered row submits a
+    // Prune allocations down to actual bearers. Every rendered row submits a
     // slider value, so without this the flag accumulates an entry for every actor
     // ever offered as a candidate -- mostly zeroes, plus stale figures for anyone
     // plucked from the list. Only members are ever read, so the rest is dead weight.

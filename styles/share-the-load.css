@@ -3,7 +3,7 @@
 /* -------------------------------------------- */
 
 /* Column flow with a scrolling middle: the footer buttons must stay on screen
-   no matter how many carriers the list holds. */
+   no matter how many bearers the list holds. */
 .share-the-load .window-content {
   display: flex;
   flex-direction: column;
@@ -19,7 +19,7 @@
   overflow: hidden;
 }
 
-.share-the-load .stl-carriers-fieldset {
+.share-the-load .stl-bearers-fieldset {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
@@ -42,13 +42,13 @@
 }
 
 /* -------------------------------------------- */
-/*  Carrier rows                                 */
+/*  Bearer rows                                 */
 /* -------------------------------------------- */
 
 /* Fixed grid tracks, not flex. Content-sized columns reflow as the numbers change
    width while dragging, which reads as the whole row wobbling. */
-.share-the-load .stl-carrier,
-.share-the-load .stl-carrier-head {
+.share-the-load .stl-bearer,
+.share-the-load .stl-bearer-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 4rem 6.5rem;
   align-items: center;
@@ -59,13 +59,13 @@
    their middle cell together, so the tracks stay aligned.
    Kept narrow (7.2rem rather than 9rem) to hand the difference to the name column,
    which is the only flexible track -- a ~115px range input is still comfortable to
-   drag, and carrier names were truncating well before they needed to. */
-.share-the-load .stl-body[data-strategy="manual"] .stl-carrier,
-.share-the-load .stl-body[data-strategy="manual"] .stl-carrier-head {
+   drag, and bearer names were truncating well before they needed to. */
+.share-the-load .stl-body[data-strategy="manual"] .stl-bearer,
+.share-the-load .stl-body[data-strategy="manual"] .stl-bearer-head {
   grid-template-columns: minmax(0, 1fr) 7.2rem 4rem 6.5rem;
 }
 
-.share-the-load .stl-carrier-head {
+.share-the-load .stl-bearer-head {
   font-size: var(--font-size-11, 11px);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -74,11 +74,11 @@
   border-bottom: 1px solid var(--color-border-light-tertiary, rgba(0, 0, 0, 0.15));
 }
 
-.share-the-load .stl-carrier-head .stl-col-share,
-.share-the-load .stl-carrier-head .stl-col-cap,
-.share-the-load .stl-carrier-head .stl-col-weight { text-align: right; }
+.share-the-load .stl-bearer-head .stl-col-share,
+.share-the-load .stl-bearer-head .stl-col-cap,
+.share-the-load .stl-bearer-head .stl-col-weight { text-align: right; }
 
-.share-the-load .stl-carriers {
+.share-the-load .stl-bearers {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -87,12 +87,12 @@
   overflow-y: auto;
 }
 
-.share-the-load .stl-carrier {
+.share-the-load .stl-bearer {
   padding: 0.15rem 0.25rem;
   border-bottom: 1px solid var(--color-border-light-tertiary, rgba(0, 0, 0, 0.1));
 }
 
-.share-the-load .stl-carrier-label {
+.share-the-load .stl-bearer-label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -100,7 +100,7 @@
   cursor: pointer;
 }
 
-.share-the-load .stl-carrier-label img {
+.share-the-load .stl-bearer-label img {
   border: none;
   border-radius: 3px;
   object-fit: cover;
@@ -108,7 +108,7 @@
 }
 
 /* Long names truncate rather than widening the row. */
-.share-the-load .stl-carrier-name {
+.share-the-load .stl-bearer-name {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -125,7 +125,7 @@
 
 /* Fixed-width cells plus tabular figures: every digit is the same width, so the
    column cannot change size as the numbers do. */
-.share-the-load .stl-carrier-share {
+.share-the-load .stl-bearer-share {
   display: flex;
   justify-content: flex-end;
   align-items: baseline;
@@ -164,19 +164,19 @@
 
 .share-the-load .stl-source-group { opacity: 0.75; }
 
-/* A carrier kept only because it is already saved: eligibility has lapsed. */
+/* A bearer kept only because it is already saved: eligibility has lapsed. */
 .share-the-load .stl-source-configured { color: var(--color-level-warning, #c9971a); opacity: 0.9; }
 
 .share-the-load .stl-npc { flex: 0 0 auto; opacity: 0.5; font-size: var(--font-size-11, 11px); }
 
-/* Unchecked carriers keep their slider in the DOM (so its value still submits)
+/* Unchecked bearers keep their slider in the DOM (so its value still submits)
    but make it inert rather than disabled. */
-.share-the-load .stl-carrier.stl-inactive .stl-slider {
+.share-the-load .stl-bearer.stl-inactive .stl-slider {
   opacity: 0.3;
   pointer-events: none;
 }
 
-.share-the-load .stl-carrier.stl-inactive .stl-carrier-name { opacity: 0.6; }
+.share-the-load .stl-bearer.stl-inactive .stl-bearer-name { opacity: 0.6; }
 
 .share-the-load .stl-empty { padding: 0.5rem; opacity: 0.7; font-style: italic; }
 
@@ -189,7 +189,7 @@
   display: none;
 }
 
-.share-the-load .stl-carriers-footer {
+.share-the-load .stl-bearers-footer {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -197,7 +197,7 @@
   flex: 0 0 auto;
 }
 
-.share-the-load .stl-carriers-footer button { flex: 0 0 auto; width: auto; }
+.share-the-load .stl-bearers-footer button { flex: 0 0 auto; width: auto; }
 
 .share-the-load .stl-allocated {
   flex: 0 0 auto;
@@ -226,7 +226,7 @@
 .share-the-load .stl-info:hover { opacity: 0.9; }
 
 /* Carrying capacity, shown for every strategy: it explains why the shares differ. */
-.share-the-load .stl-carrier-cap {
+.share-the-load .stl-bearer-cap {
   text-align: right;
   font-variant-numeric: tabular-nums;
   opacity: 0.55;

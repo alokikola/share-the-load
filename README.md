@@ -1,92 +1,77 @@
 # Share the Load
 
-Spread the weight of a party loot actor across the characters, **without moving the
-items**. The loot stays on the pile; each carrier gets an Active Effect that reduces
-their carrying capacity by their share.
+A Foundry VTT module for dnd5e that spreads the weight of a party loot actor
+across the characters carrying it. The items stay on the loot pile; each bearer
+gets an Active Effect that reduces their carrying capacity by their share.
 
-* **Foundry** v13 · **dnd5e** 5.3.x
-* Any number of loot piles, each with its own carrier list
-* A character can carry shares from several piles at once
+Requires Foundry v13 and dnd5e 5.3.x. You can have any number of loot piles,
+each with its own bearers, and a character can carry shares from more than one
+pile at a time.
 
 ## Install
 
-Foundry → **Setup → Add-on Modules → Install Module**, and paste this into the
-Manifest URL box:
+In Foundry: Setup → Add-on Modules → Install Module, then paste this manifest URL:
 
 ```
 https://github.com/alokikola/share-the-load/releases/latest/download/module.json
 ```
 
-## Using it
+## Usage
 
-Open the config from either:
+Open the config from Settings → Share the Load → Configure Bearers, or from the
+header menu on a group actor's sheet. Tick the bearers, pick a split method,
+then Save & Apply.
 
-* **Settings → Share the Load → Configure Carriers**, or
-* the **three-dot header menu** on a group actor's sheet
+### Bearers
 
-Tick the carriers, choose how to split, then **Save & Apply**.
+The list shows the pile's group members first, then any other actor a player
+owns. Characters, NPCs and vehicles are all eligible — anything dnd5e gives an
+encumbrance track. A group actor can be a pile but not a bearer. To let an NPC
+like a pack mule carry a share, give the players ownership of it.
 
-### Who can carry
+A saved bearer who later leaves the group stays in the list, marked *no longer
+eligible*, so you can still remove their share.
 
-Candidates are offered in two tiers: the pile's own **group roster** first, then any
-actor a **player owns**. To let an NPC share the load — a mule, a hireling, a
-summoned bear — temporarily give the players ownership of it.
+### Split methods
 
-Characters, NPCs and vehicles are all eligible, since those are the actor types
-dnd5e gives an encumbrance track. A group actor can be a pile but never a carrier.
+- **Evenly** — equal weight each
+- **By Strength** — proportional to Strength score
+- **By capacity** — proportional to what each bearer can actually hold
+- **Manual** — sliders that always total 100%
 
-Anyone already saved on a pile keeps appearing even if they later leave the group
-and lose ownership, flagged as *no longer eligible*. Without that they would keep an
-effect with no row left to untick it.
+If your party includes anything small, use *By capacity*: an even split can hand
+a Tiny familiar most of its carrying capacity, where a capacity split gives it a
+proportionally tiny share.
 
-### Splitting the weight
+The footer shows how much more weight the pile can absorb before a bearer
+crosses an encumbrance threshold, and which bearer that is.
 
-| Method | Behaviour |
-| --- | --- |
-| **Evenly** | Equal weight each |
-| **By Strength** | Proportional to Strength score |
-| **By capacity** | Proportional to what each carrier can actually hold |
-| **Manual** | Sliders, always totalling 100% |
+### Encumbrance settings
 
-**By capacity** is usually what you want when the party includes anything small.
-An owl with 22.5 lb of capacity takes an even share of 15.2 lb from a 76 lb pile —
-two thirds of everything it can carry — where a capacity split gives it 2.3.
+The module follows the world's dnd5e encumbrance rule. Under *variant*, all
+three thresholds apply and distributed weight can push a bearer into the
+encumbered tiers. Under *normal*, only maximum capacity has any effect, so
+headroom is measured against capacity alone. Under *none*, encumbrance does
+nothing and neither can this module; the config warns you if the world is set
+that way. The two active rules can name different bearers as the constraint,
+so the readout depends on which one your world uses.
 
-Manual sliders are a single allocation: move one and the others absorb the
-difference, keeping their proportions to each other. **Even Out** resets them.
+## Uninstalling
 
-### Reading the panel
-
-The footer reports how much more the pile can absorb before someone crosses a
-threshold, and who. It accounts for each carrier's *fraction* of new loot rather
-than simply who is nearest a line — a carrier on a 10% share approaches their limit
-five times slower than one on 50%. Ties list everyone.
-
-The header row shows each carrier's capacity, their share, and its percentage. The
-line above the list splits the pile's weight into items and coin.
-
+Run Settings → Share the Load → Remove All Effects **before** disabling or
+uninstalling. The capacity reduction is applied by the dnd5e system, not by
+this module, so effects left behind keep working after the module is gone —
+with nothing left in the UI to explain or remove them. Pile configurations
+survive the purge, so you can re-apply if you reinstall.
 
 ## How it works
 
-Each carrier receives an Active Effect targeting
-`system.attributes.encumbrance.bonuses.overall` with the negative of their share.
-That field is a documented dnd5e effect target, consumed by `prepareEncumbrance()`
-via `simplifyBonus()`.
+Each bearer gets an Active Effect adding a negative term to
+`system.attributes.encumbrance.bonuses.overall`, a documented dnd5e effect
+target. Effects from multiple piles stack. Recalculation runs only on the
+acting GM's client and is debounced, so dragging a stack of loot onto the pile
+produces one update, not twenty.
 
-Values are always **explicitly signed** (`-37`, never `37`). The field holds a roll
-formula rather than a number: each effect appends another term instead of being
-summed, and the result is added to every threshold, so only a negative value reduces
-capacity. Verified on a live world — effects of `-37` and `-12` yield `-37 - 12`,
-taking a 150 lb capacity to 101. Shares from several piles stack correctly as a
-result.
-
-Capacity is reconstructed as `str × threshold × mod` rather than read from
-`encumbrance.max`, because this module *reduces* that value and reading it back
-would feed the output into its own input.
-
-Recalculation runs only on the acting GM, debounced, so dragging in a stack of loot
-produces one update rather than twenty.
-
-## Licence
+## License
 
 MIT. See [LICENSE](LICENSE).

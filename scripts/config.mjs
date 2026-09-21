@@ -23,7 +23,7 @@ export const STRATEGIES = {
  * dnd5e computes all three thresholds no matter what, but only applies the
  * encumbered / heavily encumbered speed penalties under the `variant` rule.
  * Under `normal` a character can sail past "heavily encumbered" with no effect
- * at all -- verified live, where a carrier 27 lb over that threshold still had
+ * at all -- verified live, where a bearer 27 lb over that threshold still had
  * full movement -- so only `maximum` is worth reporting. Under `none` nothing
  * consumes encumbrance and this module has no effect on play.
  *
@@ -83,9 +83,9 @@ export function candidatePiles() {
  * Actor types that can carry a share. These are exactly the types whose data
  * models call AttributesFields.prepareBaseEncumbrance, and so are the only ones
  * with the `encumbrance.bonuses` field our effect targets. A group actor has no
- * encumbrance at all, so it can be a pile but never a carrier.
+ * encumbrance at all, so it can be a pile but never a bearer.
  */
-export const CARRIER_TYPES = ["character", "npc", "vehicle"];
+export const BEARER_TYPES = ["character", "npc", "vehicle"];
 
 /**
  * Actor ids on a group actor's roster.
@@ -102,23 +102,23 @@ export function groupMemberIds(pile) {
 }
 
 /**
- * Actors offered as carriers for a pile, in priority order:
+ * Actors offered as bearers for a pile, in priority order:
  *   1. `group`      on the pile's own group roster
  *   2. `owned`      any eligible actor a player owns (temporarily granting a
  *                   player ownership of an NPC is how you add a mule or hireling)
  *   3. `configured` already saved on this pile but no longer matching either tier
  *
- * Tier 3 is not a convenience: without it, a carrier who leaves the group and
+ * Tier 3 is not a convenience: without it, a bearer who leaves the group and
  * loses ownership keeps their encumbrance effect with no row in the UI to
  * uncheck, leaving an invisible penalty only the console could clear.
  *
  * @param {Actor} pile
  * @returns {Array<{actor: Actor, source: string}>}
  */
-export function carrierCandidates(pile) {
+export function bearerCandidates(pile) {
   const found = new Map();
   const add = (actor, source) => {
-    if ( !actor || !CARRIER_TYPES.includes(actor.type) || found.has(actor.id) ) return;
+    if ( !actor || !BEARER_TYPES.includes(actor.type) || found.has(actor.id) ) return;
     found.set(actor.id, { actor, source });
   };
 

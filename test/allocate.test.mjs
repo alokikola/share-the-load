@@ -101,17 +101,17 @@ const T = (e, h, m) => ({ encumbered: e, heavilyEncumbered: h, maximum: m });
     { name: "A", carried: 40, share: 10, thresholds: T(50, 100, 150) },
     { name: "B", carried: 10, share: 10, thresholds: T(50, 100, 150) }
   ], 20);
-  check("names the binding carrier", r.limiting.map(l => l.name), ["A"]);
+  check("names the binding bearer", r.limiting.map(l => l.name), ["A"]);
   check("reports the threshold they hit", r.limiting[0].threshold, "encumbered");
   // A has 50-10-40 = 0 room while absorbing half of anything new.
-  check("slack accounts for the carrier's fraction", r.slack, 0);
+  check("slack accounts for the bearer's fraction", r.slack, 0);
 }
 {
   const r = headroom([
     { name: "A", carried: 30, share: 10, thresholds: T(50, 100, 150) },
     { name: "B", carried: 30, share: 10, thresholds: T(50, 100, 150) }
   ], 20);
-  check("ties list every affected carrier", r.limiting.map(l => l.name), ["A", "B"]);
+  check("ties list every affected bearer", r.limiting.map(l => l.name), ["A", "B"]);
 }
 {
   // Already heavily encumbered by their own gear: measured against maximum.
@@ -124,22 +124,22 @@ const T = (e, h, m) => ({ encumbered: e, heavilyEncumbered: h, maximum: m });
   assert("past maximum reports overloaded", r.over === true && r.limiting[0].name === "A");
 }
 {
-  // A carrier taking nothing never crosses, so must not bind the result.
+  // A bearer taking nothing never crosses, so must not bind the result.
   const r = headroom([
     { name: "Idle", carried: 49, share: 0, thresholds: T(50, 100, 150) },
     { name: "Real", carried: 0, share: 10, thresholds: T(50, 100, 150) }
   ], 10);
-  check("zero-share carriers are ignored", r.limiting.map(l => l.name), ["Real"]);
+  check("zero-share bearers are ignored", r.limiting.map(l => l.name), ["Real"]);
 }
 
 
 console.log("\nheadroom - basic vs variant rules");
 {
   const T2 = (e, h, m) => ({ encumbered: e, heavilyEncumbered: h, maximum: m });
-  // Carrier is past encumbered and heavily encumbered, but well under maximum.
-  const carrier = [{ name: "A", carried: 110, share: 10, thresholds: T2(50, 100, 150) }];
-  const variant = headroom(carrier, 10, ["encumbered", "heavilyEncumbered", "maximum"]);
-  const basic = headroom(carrier, 10, ["maximum"]);
+  // Bearer is past encumbered and heavily encumbered, but well under maximum.
+  const bearer = [{ name: "A", carried: 110, share: 10, thresholds: T2(50, 100, 150) }];
+  const variant = headroom(bearer, 10, ["encumbered", "heavilyEncumbered", "maximum"]);
+  const basic = headroom(bearer, 10, ["maximum"]);
   check("variant measures against maximum once the others are crossed", variant.limiting[0].threshold, "maximum");
   check("basic measures against maximum only", basic.limiting[0].threshold, "maximum");
 

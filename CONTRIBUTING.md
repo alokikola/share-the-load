@@ -6,7 +6,7 @@ The share maths and slider allocation are pure functions with no Foundry
 dependencies, so they run under plain Node with no install step:
 
 ```
-node test/weight.test.mjs      # pile weight, apportionment, carrier eligibility
+node test/weight.test.mjs      # pile weight, apportionment, bearer eligibility
 node test/allocate.test.mjs    # slider allocation, headroom, encumbrance rules
 ```
 

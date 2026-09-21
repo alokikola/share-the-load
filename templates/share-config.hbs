@@ -71,28 +71,28 @@
     </div>
   </fieldset>
 
-  <fieldset class="stl-carriers-fieldset">
+  <fieldset class="stl-bearers-fieldset">
     <legend>
-      {{localize "SHARETHELOAD.Legend.Carriers"}}
-      <i class="fa-solid fa-circle-info stl-info" data-tooltip="{{localize "SHARETHELOAD.Hint.Carriers"}}"></i>
+      {{localize "SHARETHELOAD.Legend.Bearers"}}
+      <i class="fa-solid fa-circle-info stl-info" data-tooltip="{{localize "SHARETHELOAD.Hint.Bearers"}}"></i>
     </legend>
 
-    <div class="stl-carrier-head">
-      <span class="stl-col-carrier">{{localize "SHARETHELOAD.Column.Carrier"}}</span>
+    <div class="stl-bearer-head">
+      <span class="stl-col-bearer">{{localize "SHARETHELOAD.Column.Bearer"}}</span>
       <span class="stl-col-share stl-manual-only">{{localize "SHARETHELOAD.Column.Share"}}</span>
       <span class="stl-col-cap">{{localize "SHARETHELOAD.Column.Capacity"}}</span>
       <span class="stl-col-weight">{{localize "SHARETHELOAD.Column.Weight"}}</span>
     </div>
 
-    <ol class="stl-carriers">
-      {{#each carriers}}
-      <li class="stl-carrier" data-str="{{this.str}}" data-cap="{{this.capacity}}" data-carried="{{this.carried}}" data-enc="{{this.thresholds.enc}}" data-heavy="{{this.thresholds.heavy}}" data-max="{{this.thresholds.max}}" data-source="{{this.source}}">
-        <label class="stl-carrier-label">
+    <ol class="stl-bearers">
+      {{#each bearers}}
+      <li class="stl-bearer" data-str="{{this.str}}" data-cap="{{this.capacity}}" data-carried="{{this.carried}}" data-enc="{{this.thresholds.enc}}" data-heavy="{{this.thresholds.heavy}}" data-max="{{this.thresholds.max}}" data-source="{{this.source}}">
+        <label class="stl-bearer-label">
           <input type="checkbox" name="members.{{this.id}}" {{checked this.checked}}>
           <img src="{{this.img}}" alt="{{this.name}}" width="28" height="28">
-          <span class="stl-carrier-name">{{this.name}}</span>
+          <span class="stl-bearer-name">{{this.name}}</span>
           {{#if this.isNPC}}
-            <i class="fa-solid fa-horse stl-npc" title="{{localize "SHARETHELOAD.NonPlayerCarrier"}}"></i>
+            <i class="fa-solid fa-horse stl-npc" title="{{localize "SHARETHELOAD.NonPlayerBearer"}}"></i>
           {{/if}}
           <span class="stl-source stl-source-{{this.source}}">{{this.sourceLabel}}</span>
         </label>
@@ -102,20 +102,20 @@
           <input type="range" name="weights.{{this.id}}" min="0" max="100" step="1" value="{{this.weight}}">
         </div>
 
-        <span class="stl-carrier-cap">{{this.capacity}}</span>
+        <span class="stl-bearer-cap">{{this.capacity}}</span>
 
-        <span class="stl-carrier-share">
+        <span class="stl-bearer-share">
           <span class="stl-share-weight">{{this.share}}</span>
           <span class="stl-share-pct"></span>
           {{#if this.applied}}<i class="fa-solid fa-check stl-applied" title="{{localize "SHARETHELOAD.Applied"}}"></i>{{/if}}
         </span>
       </li>
       {{else}}
-        <li class="stl-empty">{{localize "SHARETHELOAD.NoCarriers"}}</li>
+        <li class="stl-empty">{{localize "SHARETHELOAD.NoBearers"}}</li>
       {{/each}}
     </ol>
 
-    <div class="stl-carriers-footer">
+    <div class="stl-bearers-footer">
       <span class="stl-allocated stl-manual-only">
         {{localize "SHARETHELOAD.Field.Allocated"}}: <span class="stl-sum">100%</span>
       </span>

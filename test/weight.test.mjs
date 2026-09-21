@@ -42,7 +42,7 @@ globalThis.CONFIG = {
 
 const MODULE_ID = "share-the-load";
 
-function makeCarrier(id, name, str = 10, type = "character") {
+function makeBearer(id, name, str = 10, type = "character") {
   const actor = { id, name, type, system: { abilities: { str: { value: str } } } };
   ACTORS.set(id, actor);
   return actor;
@@ -90,10 +90,10 @@ const sum = arr => Math.round(arr.reduce((a, b) => a + b, 0) * 10) / 10;
 
 /* ---------- tests ---------- */
 
-makeCarrier("a", "Alice", 16);
-makeCarrier("b", "Bob", 10);
-makeCarrier("c", "Cai", 8);
-makeCarrier("mule", "Mule", 14, "npc");
+makeBearer("a", "Alice", 16);
+makeBearer("b", "Bob", 10);
+makeBearer("c", "Cai", 8);
+makeBearer("mule", "Mule", 14, "npc");
 
 console.log("\npileWeight");
 {
@@ -158,7 +158,7 @@ console.log("\ncomputeShares - manual");
 console.log("\ncomputeShares - eligibility + guards");
 {
   const pile = makePile([{ w: 60 }], { enabled: true, strategy: "even", members: ["a", "mule"] });
-  check("player-owned NPC is a valid carrier", shareList(pile), [30, 30]);
+  check("player-owned NPC is a valid bearer", shareList(pile), [30, 30]);
 }
 {
   const pile = makePile([{ w: 60 }], { enabled: true, strategy: "even", members: ["a", "ghost"] });
