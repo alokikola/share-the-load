@@ -26,11 +26,11 @@ function queueSync(pile) {
   pending.get(pile.id)();
 }
 
-/** Piles whose share maths depend on a given bearer's Strength. */
+/** Piles whose share maths depend on a given bearer's carrying capacity. */
 function pilesWeightedBy(actorId) {
   return candidatePiles().filter(p => {
     const cfg = getPileConfig(p);
-    return cfg.enabled && (cfg.strategy === "strength") && cfg.members.includes(actorId);
+    return cfg.enabled && (cfg.strategy === "capacity") && cfg.members.includes(actorId);
   });
 }
 
@@ -75,41 +75,8 @@ Hooks.once("ready", async () => {
     openConfig: pileId => new ShareConfigApp({ pileId }).render(true)
   };
 
-  // Registered once, on the document, in the capture phase. See guardSliderWheel.
-  document.addEventListener("wheel", guardSliderWheel, { capture: true, passive: false });
-
   if ( game.settings.get(MODULE_ID, "autoSync") ) await syncAll();
 });
-
-/* -------------------------------------------- */
-/*  Slider wheel guard                           */
-/* -------------------------------------------- */
-
-/**
- * A range input changes value on wheel, so scrolling the bearer list past a
- * slider silently re-weights the party -- a real hazard, since the change is
- * invisible until someone hits Apply.
- *
- * This MUST be a document-level listener in the capture phase. Something upstream
- * (core, or one of the other modules in a typical world) consumes wheel on range
- * inputs before a listener bound to the input itself ever runs, so calling
- * preventDefault from there is too late. Verified against a live world: an
- * element-level guard let the value change anyway, while this stops it dead.
- *
- * The scroll is forwarded to the bearer list so the list still scrolls normally --
- * swallowing the event outright would make the list unscrollable wherever a slider
- * sits under the cursor, which is most of it.
- *
- * @param {WheelEvent} event
- */
-function guardSliderWheel(event) {
-  const slider = event.target;
-  if ( (slider?.type !== "range") || !slider.closest?.(`.${MODULE_ID}`) ) return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  const list = slider.closest(".stl-bearers");
-  if ( list ) list.scrollTop += event.deltaY;
-}
 
 /* -------------------------------------------- */
 /*  Change detection                             */
@@ -122,8 +89,10 @@ for ( const hook of ["createItem", "updateItem", "deleteItem"] ) {
 Hooks.on("updateActor", (actor, changes) => {
   // Pile contents can change without touching items: currency, or our own config.
   if ( isPile(actor) && (changes.system?.currency || changes.flags?.[MODULE_ID]) ) queueSync(actor);
-  // A bearer's Strength changing reweights any strength-based pile it belongs to.
-  if ( BEARER_TYPES.includes(actor.type) && changes.system?.abilities?.str ) {
+  // Capacity is Strength x size, or cargo for a vehicle; a change to any of them
+  // reweights every capacity-based pile the bearer belongs to.
+  const sys = changes.system;
+  if ( BEARER_TYPES.includes(actor.type) && (sys?.abilities?.str || sys?.traits?.size || sys?.attributes?.capacity) ) {
     for ( const pile of pilesWeightedBy(actor.id) ) queueSync(pile);
   }
 });
@@ -166,27 +135,5 @@ Hooks.on("getHeaderControlsApplicationV2", (app, controls) => {
     label: "SHARETHELOAD.HeaderControl",
     action: ACTION,
     onClick: () => new ShareConfigApp({ pileId: actor.id }).render(true)
-  });
-});
-
-/**
- * Same entry on legacy ApplicationV1 sheets.
- *
- * V1 dispatches via `this._callHooks(className => `get${className}HeaderButtons`)`,
- * which walks the class chain -- so this generic hook fires for every V1
- * application, and the guard in pileFromSheet filters out everything that is not a
- * pile sheet. Defensive only: dnd5e 5.x and Tidy5e are both ApplicationV2, so this
- * matters solely for a third-party sheet that has not migrated.
- */
-Hooks.on("getApplicationHeaderButtons", (app, buttons) => {
-  const actor = pileFromSheet(app);
-  if ( !actor ) return;
-  if ( buttons.some(b => b.class === ACTION) ) return;
-
-  buttons.unshift({
-    label: game.i18n.localize("SHARETHELOAD.HeaderControl"),
-    class: ACTION,
-    icon: "fa-solid fa-weight-hanging",
-    onclick: () => new ShareConfigApp({ pileId: actor.id }).render(true)
   });
 });

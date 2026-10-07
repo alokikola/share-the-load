@@ -24,13 +24,6 @@
     <legend>{{localize "SHARETHELOAD.Legend.Distribution"}}</legend>
 
     <div class="form-group">
-      <label>{{localize "SHARETHELOAD.Field.Enabled"}}</label>
-      <div class="form-fields">
-        <input type="checkbox" name="enabled" {{checked config.enabled}}>
-      </div>
-    </div>
-
-    <div class="form-group">
       <label>
         {{localize "SHARETHELOAD.Field.Strategy"}}
         <i class="fa-solid fa-circle-info stl-info stl-manual-only" data-tooltip="{{localize "SHARETHELOAD.Hint.Manual"}}"></i>
@@ -44,29 +37,35 @@
       </div>
     </div>
 
-    {{#if hasCurrency}}
-    <div class="form-group">
-      <label>{{localize "SHARETHELOAD.Field.IncludeCurrency"}}</label>
-      <div class="form-fields">
+    {{!-- The two toggles and the weight summary share one line. --}}
+    <div class="stl-toggles">
+      <label class="stl-toggle">
+        <input type="checkbox" name="enabled" {{checked config.enabled}}>
+        {{localize "SHARETHELOAD.Field.Enabled"}}
+      </label>
+      {{#if hasCurrency}}
+      <label class="stl-toggle">
         <input type="checkbox" name="includeCurrency" {{checked config.includeCurrency}}>
-      </div>
-      {{#unless currencyRuleActive}}
-        <p class="hint warning">{{localize "SHARETHELOAD.Hint.CurrencyRuleOff"}}</p>
-      {{/unless}}
-    </div>
-    {{/if}}
-
-    <div class="stl-metrics">
-      <span class="stl-metric">
-        {{localize "SHARETHELOAD.Metric.Items"}} <strong>{{breakdown.items}}</strong>
-      </span>
-      {{#if showCoin}}
-      <span class="stl-metric">
-        {{localize "SHARETHELOAD.Metric.Coin"}} <strong>{{breakdown.coin}}</strong>
-      </span>
+        {{localize "SHARETHELOAD.Field.IncludeCurrency"}}
+        {{#unless currencyRuleActive}}
+          <i class="fa-solid fa-triangle-exclamation stl-info stl-warn" data-tooltip="{{localize "SHARETHELOAD.Hint.CurrencyRuleOff"}}"></i>
+        {{/unless}}
+      </label>
       {{/if}}
-      <span class="stl-metric stl-metric-total">
-        {{localize "SHARETHELOAD.Metric.Total"}} <strong>{{total}}</strong>
+
+      <span class="stl-metrics">
+        <span class="stl-metric">
+          {{localize "SHARETHELOAD.Metric.Items"}} <strong>{{breakdown.items}}</strong>
+        </span>
+        {{#if showCoin}}
+        <span class="stl-metric">
+          {{localize "SHARETHELOAD.Metric.Coin"}} <strong>{{breakdown.coin}}</strong>
+          <span class="stl-coin-count">({{coinCount}})</span>
+        </span>
+        {{/if}}
+        <span class="stl-metric stl-metric-total">
+          {{localize "SHARETHELOAD.Metric.Total"}} <strong>{{total}} {{unit}}</strong>
+        </span>
       </span>
     </div>
   </fieldset>
@@ -79,28 +78,32 @@
 
     <div class="stl-bearer-head">
       <span class="stl-col-bearer">{{localize "SHARETHELOAD.Column.Bearer"}}</span>
-      <span class="stl-col-share stl-manual-only">{{localize "SHARETHELOAD.Column.Share"}}</span>
-      <span class="stl-col-cap">{{localize "SHARETHELOAD.Column.Capacity"}}</span>
-      <span class="stl-col-weight">{{localize "SHARETHELOAD.Column.Weight"}}</span>
+      <span class="stl-col-share stl-manual-only">{{localize "SHARETHELOAD.Column.Share"}} (<span class="stl-share-total">0</span>)</span>
+      <span class="stl-col-cap">{{localize "SHARETHELOAD.Column.Capacity"}} ({{unit}})</span>
+      <span class="stl-col-weight">{{localize "SHARETHELOAD.Column.Weight"}} ({{unit}})</span>
     </div>
 
     <ol class="stl-bearers">
       {{#each bearers}}
-      <li class="stl-bearer" data-str="{{this.str}}" data-cap="{{this.capacity}}" data-carried="{{this.carried}}" data-enc="{{this.thresholds.enc}}" data-heavy="{{this.thresholds.heavy}}" data-max="{{this.thresholds.max}}" data-source="{{this.source}}">
+      <li class="stl-bearer" data-carried="{{this.carried}}" data-other="{{this.otherLoad}}" data-enc="{{this.thresholds.encumbered}}" data-heavy="{{this.thresholds.heavilyEncumbered}}" data-max="{{this.thresholds.maximum}}">
         <label class="stl-bearer-label">
           <input type="checkbox" name="members.{{this.id}}" {{checked this.checked}}>
           <img src="{{this.img}}" alt="{{this.name}}" width="28" height="28">
           <span class="stl-bearer-name">{{this.name}}</span>
-          {{#if this.isNPC}}
-            <i class="fa-solid fa-horse stl-npc" title="{{localize "SHARETHELOAD.NonPlayerBearer"}}"></i>
+          {{#if this.otherLoadLabel}}
+            <span class="stl-other-loads" data-tooltip-html="{{this.otherLoadTooltip}}">{{this.otherLoadLabel}}</span>
           {{/if}}
-          <span class="stl-source stl-source-{{this.source}}">{{this.sourceLabel}}</span>
+          {{#if this.isNPC}}
+            <i class="fa-solid fa-horse stl-npc" data-tooltip="{{localize "SHARETHELOAD.NonPlayerBearer"}}"></i>
+          {{/if}}
+          <span class="stl-source stl-source-{{this.source}}" data-tooltip="{{this.sourceHint}}">{{this.sourceLabel}}</span>
         </label>
 
-        {{!-- Kept outside the label so dragging does not toggle the checkbox. --}}
-        <div class="stl-slider">
-          <input type="range" name="weights.{{this.id}}" min="0" max="100" step="1" value="{{this.weight}}">
-        </div>
+        {{!-- Kept outside the label so clicking it does not toggle the checkbox. --}}
+        <span class="stl-share-cell stl-manual-only">
+          <input type="number" class="stl-ratio" name="weights.{{this.id}}" min="0" step="any" value="{{this.weight}}">
+          <span class="stl-ratio-off">—</span>
+        </span>
 
         <span class="stl-bearer-cap">{{this.capacity}}</span>
 
@@ -114,26 +117,17 @@
         <li class="stl-empty">{{localize "SHARETHELOAD.NoBearers"}}</li>
       {{/each}}
     </ol>
-
-    <div class="stl-bearers-footer">
-      <span class="stl-allocated stl-manual-only">
-        {{localize "SHARETHELOAD.Field.Allocated"}}: <span class="stl-sum">100%</span>
-      </span>
-      <button type="button" data-action="evenOut" class="stl-manual-only">
-        <i class="fa-solid fa-scale-balanced"></i> {{localize "SHARETHELOAD.Button.EvenOut"}}
-      </button>
-    </div>
   </fieldset>
 
   <footer class="stl-footer">
     <span class="stl-headroom"></span>
-    <button type="submit" data-action="save">
+    <button type="submit" data-action="save" data-tooltip="{{localize "SHARETHELOAD.ButtonHint.Save"}}">
       <i class="fa-solid fa-save"></i> {{localize "SHARETHELOAD.Button.Save"}}
     </button>
-    <button type="submit" data-action="apply">
+    <button type="submit" data-action="apply" data-tooltip="{{localize "SHARETHELOAD.ButtonHint.Apply"}}">
       <i class="fa-solid fa-weight-hanging"></i> {{localize "SHARETHELOAD.Button.Apply"}}
     </button>
-    <button type="button" data-action="clear">
+    <button type="button" data-action="clear" data-tooltip="{{localize "SHARETHELOAD.ButtonHint.Clear"}}">
       <i class="fa-solid fa-trash"></i> {{localize "SHARETHELOAD.Button.Clear"}}
     </button>
   </footer>

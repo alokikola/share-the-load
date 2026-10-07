@@ -12,7 +12,6 @@ export const CHANGE_KEY = "system.attributes.encumbrance.bonuses.overall";
 /** Distribution strategies. */
 export const STRATEGIES = {
   even: "SHARETHELOAD.Strategy.Even",
-  strength: "SHARETHELOAD.Strategy.Strength",
   capacity: "SHARETHELOAD.Strategy.Capacity",
   manual: "SHARETHELOAD.Strategy.Manual"
 };
@@ -54,7 +53,11 @@ export const DEFAULT_CONFIG = {
  */
 export function getPileConfig(pile) {
   const stored = pile?.getFlag(MODULE_ID, "config") ?? {};
-  return foundry.utils.mergeObject(foundry.utils.deepClone(DEFAULT_CONFIG), stored, { inplace: false });
+  const config = foundry.utils.mergeObject(foundry.utils.deepClone(DEFAULT_CONFIG), stored, { inplace: false });
+  // "strength" was retired in favour of "capacity", which is Strength x size: the
+  // same split for a party of one size, and correct where they differ (a familiar).
+  if ( config.strategy === "strength" ) config.strategy = "capacity";
+  return config;
 }
 
 /**

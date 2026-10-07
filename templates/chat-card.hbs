@@ -1,0 +1,33 @@
+<div class="stl-chat">
+  {{#if stopped}}
+    <p>{{localize "SHARETHELOAD.Chat.Stopped" pile=pile}}</p>
+  {{else}}
+    <h3>{{localize "SHARETHELOAD.Chat.Title" pile=pile}}</h3>
+    <p class="stl-chat-sub">{{total}} {{unit}}{{#if coins}}, {{coins}}{{/if}} · {{method}}</p>
+    {{#if rows.length}}
+    <table>
+      <thead>
+        <tr>
+          <th>{{localize "SHARETHELOAD.Column.Bearer"}}</th>
+          {{#if manual}}<th>{{localize "SHARETHELOAD.Column.Share"}}</th>{{/if}}
+          <th>{{localize "SHARETHELOAD.Chat.Carries"}}</th>
+          <th>{{localize "SHARETHELOAD.Chat.Encumbrance"}}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each rows}}
+        <tr{{#if this.over}} class="stl-over"{{/if}}>
+          <td>{{this.name}}</td>
+          {{#if ../manual}}<td>{{this.shares}}</td>{{/if}}
+          <td>{{this.weight}} {{../unit}}</td>
+          <td>{{this.load}} / {{this.after}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+    {{#each overLines}}<p class="stl-chat-over">{{this}}</p>{{/each}}
+    {{else}}
+    <p>{{localize "SHARETHELOAD.Chat.Nothing"}}</p>
+    {{/if}}
+  {{/if}}
+</div>

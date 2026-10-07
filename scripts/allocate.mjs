@@ -1,16 +1,64 @@
 /**
- * Pure allocation maths for the manual-share sliders.
- *
- * No DOM, no Foundry globals -- see test/allocate.test.mjs.
- *
- * Every function here is deterministic: the same inputs always produce the same
- * output. That property is what stops the sliders wandering. The UI must derive
- * each frame of a drag from the values captured when the drag STARTED, never from
- * the values it wrote during the previous frame, or rounding error accumulates and
- * the untouched sliders visibly drift.
+ * Pure maths: the split itself, and headroom. No DOM, no Foundry globals --
+ * see test/allocate.test.mjs.
  */
 
-const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+/**
+ * Each bearer's fraction of the pile under a split method. The single source of
+ * truth for the split: weight.mjs uses it to write effects, and the config form
+ * uses it for the live preview, so the two cannot disagree.
+ *
+ *  - `even`     equal fractions; `bases` is ignored.
+ *  - `capacity` proportional to carrying capacity. Only trusted when every bearer
+ *               reports a usable figure -- one of unknown capacity (0) would
+ *               silently receive nothing -- so otherwise it falls back to even.
+ *  - `manual`   proportional to the GM's per-bearer ratios. Normalised, so they need not
+ *               total anything in particular; all zero falls back to even.
+ *
+ * @param {string} strategy
+ * @param {number[]} bases  Per-bearer capacity or manual ratio.
+ * @returns {number[]}      Fractions summing to 1.
+ */
+export function fractions(strategy, bases) {
+  const n = bases.length;
+  const even = () => bases.map(() => 1 / n);
+  if ( (strategy !== "capacity") && (strategy !== "manual") ) return even();
+  if ( (strategy === "capacity") && !bases.every(b => b > 0) ) return even();
+  const clamped = bases.map(b => Math.max(Number(b) || 0, 0));
+  const sum = clamped.reduce((a, b) => a + b, 0);
+  return sum > 0 ? clamped.map(b => b / sum) : even();
+}
+
+/**
+ * Round a weight to two decimal places. The one place weight precision is set: a
+ * single coin weighs 0.02 lb, so a tenth would hide small hoards entirely.
+ * @param {number} value
+ * @returns {number}
+ */
+export function roundWeight(value) {
+  return Math.round(value * 100) / 100;
+}
+
+/**
+ * Turn fractions into rounded weights that still add up to the total.
+ * Rounding each share loses or gains a little; the drift goes onto the largest
+ * share. Shared by the real sync and the form preview, so both show the same
+ * figures down to the last decimal.
+ *
+ * @param {number} total
+ * @param {number[]} fracs  From fractions().
+ * @returns {number[]}
+ */
+export function splitWeight(total, fracs) {
+  const out = fracs.map(f => roundWeight(total * f));
+  const drift = roundWeight(total - out.reduce((a, b) => a + b, 0));
+  if ( drift && out.length ) {
+    let largest = 0;
+    for ( let i = 1; i < out.length; i++ ) if ( out[i] > out[largest] ) largest = i;
+    out[largest] = roundWeight(out[largest] + drift);
+  }
+  return out;
+}
 
 /** Every threshold level, in the order a bearer crosses them. */
 export const ALL_LEVELS = ["encumbered", "heavilyEncumbered", "maximum"];
@@ -62,91 +110,9 @@ export function headroom(bearers, total, levels = ALL_LEVELS) {
 
   const min = Math.min(...constrained.map(c => c.slack));
   return {
-    slack: Math.round(min * 10) / 10,
+    slack: roundWeight(min),
     // Ties are reported in full rather than picking an arbitrary winner.
-    limiting: constrained.filter(c => (c.slack - min) < 0.05).map(({ name, threshold }) => ({ name, threshold })),
+    limiting: constrained.filter(c => (c.slack - min) < 0.005).map(({ name, threshold }) => ({ name, threshold })),
     over: false
   };
-}
-
-/**
- * Round a set of fractional values to integers summing exactly to `target`,
- * using the largest-remainder method.
- *
- * Ties break on index so the result is stable rather than dependent on sort
- * implementation -- a wobbling tie-break is itself a source of visible jitter.
- *
- * @param {number[]} values  Fractional values, expected to sum to ~target.
- * @param {number} target    Exact integer total required.
- * @returns {number[]}
- */
-export function apportionIntegers(values, target) {
-  if ( !values.length ) return [];
-  const floors = values.map(Math.floor);
-  let remainder = target - floors.reduce((a, b) => a + b, 0);
-
-  const byFraction = values
-    .map((v, i) => ({ i, frac: v - Math.floor(v) }))
-    .sort((a, b) => (b.frac - a.frac) || (a.i - b.i));
-
-  const out = floors.slice();
-  for ( let k = 0; (k < remainder) && (k < byFraction.length); k++ ) out[byFraction[k].i] += 1;
-
-  // Guard the pathological case where remainder exceeds the number of entries.
-  let drift = target - out.reduce((a, b) => a + b, 0);
-  for ( let k = 0; drift > 0; k = (k + 1) % out.length ) { out[k] += 1; drift--; }
-
-  return out;
-}
-
-/**
- * Scale a set of values so they total `target`, as integers.
- * @param {number[]} values
- * @param {number} [target=100]
- * @returns {number[]}
- */
-export function normalize(values, target = 100) {
-  if ( !values.length ) return [];
-  const sum = values.reduce((a, b) => a + b, 0);
-  // Nothing allocated anywhere is not a meaningful ratio; share equally.
-  const scaled = sum > 0
-    ? values.map(v => Math.max(v, 0) * target / sum)
-    : values.map(() => target / values.length);
-  return apportionIntegers(scaled, target);
-}
-
-/**
- * Move one entry to `next` and absorb the difference into the others,
- * preserving the ratios they had in `baseline`.
- *
- * @param {number[]} baseline  Values at the START of the interaction.
- * @param {number} index       Entry being moved.
- * @param {number} next        Its requested new value.
- * @param {number} [total=100] Invariant the set must sum to.
- * @returns {number[]}         Integers summing exactly to `total`.
- */
-export function rebalance(baseline, index, next, total = 100) {
-  const n = baseline.length;
-  if ( !n ) return [];
-  // A sole holder has nowhere to push the remainder, so it holds everything.
-  if ( n === 1 ) return [total];
-
-  const moved = Math.round(clamp(next, 0, total));
-  const remaining = total - moved;
-
-  const others = [];
-  for ( let i = 0; i < n; i++ ) if ( i !== index ) others.push(i);
-  const othersTotal = others.reduce((sum, i) => sum + Math.max(baseline[i], 0), 0);
-
-  const scaled = others.map(i => (othersTotal > 0
-    ? Math.max(baseline[i], 0) * remaining / othersTotal
-    // With every other entry at zero there is no ratio to preserve.
-    : remaining / others.length));
-
-  const ints = apportionIntegers(scaled, remaining);
-
-  const out = new Array(n);
-  out[index] = moved;
-  others.forEach((entryIndex, k) => { out[entryIndex] = ints[k]; });
-  return out;
 }

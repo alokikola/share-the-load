@@ -13,11 +13,6 @@ function findEffects(actor, pileId) {
   return actor.effects.filter(e => e.getFlag(MODULE_ID, "pile") === pileId);
 }
 
-/** Find our effect for a given pile on a given bearer. */
-function findEffect(actor, pileId) {
-  return findEffects(actor, pileId)[0] ?? null;
-}
-
 /**
  * Serialises syncs per pile.
  *
@@ -69,16 +64,17 @@ function effectData(pile, weight) {
  * Bring every bearer's effect in line with one pile's current contents.
  * Bearers no longer configured have their effect for this pile removed.
  * @param {Actor} pile
+ * @returns {Promise<boolean>}  Whether any effect was created, changed or removed.
  */
 export async function syncPile(pile) {
-  if ( !isActingGM() || !pile ) return;
+  if ( !isActingGM() || !pile ) return false;
   // Queue behind any sync already running for this pile rather than racing it.
   const run = (inFlight.get(pile.id) ?? Promise.resolve())
     .catch(() => {})
     .then(() => syncPileNow(pile));
   inFlight.set(pile.id, run);
   try {
-    await run;
+    return await run;
   } finally {
     if ( inFlight.get(pile.id) === run ) inFlight.delete(pile.id);
   }
@@ -91,6 +87,7 @@ export async function syncPile(pile) {
  */
 async function syncPileNow(pile) {
   const shares = computeShares(pile);
+  let changed = false;
 
   // Deliberately unfiltered by actor type: `shares` already contains only valid
   // bearers, and sweeping every actor is what removes a stale effect from someone
@@ -105,6 +102,7 @@ async function syncPileNow(pile) {
       const extras = found.slice(1).map(e => e.id);
       console.warn(`share-the-load | removing ${extras.length} duplicate effect(s) from ${actor.name}`);
       await actor.deleteEmbeddedDocuments("ActiveEffect", extras);
+      changed = true;
     }
 
     const existing = found[0] ?? null;
@@ -112,13 +110,15 @@ async function syncPileNow(pile) {
     if ( owed > 0 ) {
       if ( !existing ) await actor.createEmbeddedDocuments("ActiveEffect", [effectData(pile, owed)]);
       // Skip no-op updates so item shuffling doesn't spam the database.
-      else if ( existing.getFlag(MODULE_ID, "weight") !== owed ) {
-        await existing.update(effectData(pile, owed));
-      }
+      else if ( existing.getFlag(MODULE_ID, "weight") !== owed ) await existing.update(effectData(pile, owed));
+      else continue;
+      changed = true;
     } else if ( existing ) {
       await existing.delete();
+      changed = true;
     }
   }
+  return changed;
 }
 
 /** Recompute every configured pile. */
@@ -134,15 +134,20 @@ export async function syncAll() {
  * Remove all effects sourced from a pile, regardless of current configuration.
  * Used when a pile is disabled or deleted.
  * @param {string} pileId
+ * @returns {Promise<number>}  How many effects were removed.
  */
 export async function clearPile(pileId) {
-  if ( !isActingGM() ) return;
+  if ( !isActingGM() ) return 0;
+  let removed = 0;
   for ( const actor of game.actors ) {
     // Delete every match, not just the first: this is the recovery path, so it has
     // to clear duplicates too.
     const ids = findEffects(actor, pileId).map(e => e.id);
-    if ( ids.length ) await actor.deleteEmbeddedDocuments("ActiveEffect", ids);
+    if ( !ids.length ) continue;
+    await actor.deleteEmbeddedDocuments("ActiveEffect", ids);
+    removed += ids.length;
   }
+  return removed;
 }
 
 /**
@@ -167,7 +172,24 @@ export async function purgeAllEffects() {
   return removed;
 }
 
+/**
+ * The loads a bearer already carries for OTHER piles. The config shows these next
+ * to the bearer, and its headroom subtracts them -- otherwise anyone carrying for
+ * two piles looks roomier than they are.
+ * @param {Actor} actor
+ * @param {string} pileId  The pile being configured, excluded from the list.
+ * @returns {Array<{name: string, weight: number}>}
+ */
+export function otherLoads(actor, pileId) {
+  return actor.effects
+    .filter(e => (e.active ?? !e.disabled) && ((e.getFlag(MODULE_ID, "pile") ?? pileId) !== pileId))
+    .map(e => ({
+      name: game.actors.get(e.getFlag(MODULE_ID, "pile"))?.name ?? e.name,
+      weight: Number(e.getFlag(MODULE_ID, "weight")) || 0
+    }));
+}
+
 /** Weight currently assigned to a bearer by a given pile, for display. */
 export function assignedWeight(actor, pileId) {
-  return findEffect(actor, pileId)?.getFlag(MODULE_ID, "weight") ?? 0;
+  return findEffects(actor, pileId)[0]?.getFlag(MODULE_ID, "weight") ?? 0;
 }

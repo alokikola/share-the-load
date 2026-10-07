@@ -33,7 +33,12 @@ globalThis.CONFIG = {
   DND5E: {
     encumbrance: {
       baseUnits: { default: { imperial: "lb", metric: "kg" } },
-      currencyPerWeight: { imperial: 50, metric: 110 }
+      currencyPerWeight: { imperial: 50, metric: 110 },
+      threshold: {
+        encumbered: { imperial: 5, metric: 2.5 },
+        heavilyEncumbered: { imperial: 10, metric: 5 },
+        maximum: { imperial: 15, metric: 7.5 }
+      }
     }
   }
 };
@@ -42,8 +47,11 @@ globalThis.CONFIG = {
 
 const MODULE_ID = "share-the-load";
 
-function makeBearer(id, name, str = 10, type = "character") {
-  const actor = { id, name, type, system: { abilities: { str: { value: str } } } };
+function makeBearer(id, name, str = 10, type = "character", mod = 1) {
+  const actor = { id, name, type, system: {
+    abilities: { str: { value: str } },
+    attributes: { encumbrance: { mod } }
+  } };
   ACTORS.set(id, actor);
   return actor;
 }
@@ -81,6 +89,7 @@ function checkNear(label, actual, expected) {
   else { fail++; console.log(`  FAIL ${label}\n         expected ~${expected}\n         actual    ${actual}`); }
 }
 
+const { pileWeightBreakdown } = await import("../scripts/weight.mjs");
 const { pileWeight, computeShares } = await import(
   "../scripts/weight.mjs"
 );
@@ -113,6 +122,17 @@ console.log("\npileWeight");
   const pile = makePile([{ w: 10 }], { enabled: true, members: [], includeCurrency: false }, { gp: 500 });
   checkNear("skips coin weight when disabled", pileWeight(pile), 10);
 }
+{
+  // 3 gp at 50 coins per pound is 0.06 lb; at one decimal it would vanish to 0.1 or 0.
+  const pile = makePile([], { enabled: true, members: [], includeCurrency: true }, { gp: 3 });
+  check("a few coins keep their weight to two decimals", pileWeight(pile), 0.06);
+}
+{
+  // Excluded coins weigh nothing but are still counted, so the config can show them.
+  const pile = makePile([], { enabled: true, members: [], includeCurrency: false }, { gp: 120, sp: 30 });
+  const b = pileWeightBreakdown(pile);
+  check("excluded coins are still counted", [b.coin, b.coinCount], [0, 150]);
+}
 
 console.log("\ncomputeShares - even");
 {
@@ -122,13 +142,30 @@ console.log("\ncomputeShares - even");
   console.log(`       -> ${JSON.stringify(s)}`);
 }
 
-console.log("\ncomputeShares - strength");
+console.log("\ncomputeShares - capacity");
 {
-  const pile = makePile([{ w: 68 }], { enabled: true, strategy: "strength", members: ["a", "b", "c"] });
+  const pile = makePile([{ w: 68 }], { enabled: true, strategy: "capacity", members: ["a", "b", "c"] });
   const s = shareList(pile);
-  check("weights by STR 16/10/8", sum(s), 68);
+  check("same-size party splits by STR 16/10/8", sum(s), 68);
   checkNear("strongest carries most", s[0], 68 * 16 / 34);
   console.log(`       -> ${JSON.stringify(s)}`);
+}
+{
+  // Tiny: half the capacity of a Medium creature with the same Strength.
+  makeBearer("owl", "Owl", 3, "npc", 0.5);
+  const pile = makePile([{ w: 76 }], { enabled: true, strategy: "capacity", members: ["a", "owl"] });
+  const s = shareList(pile);
+  checkNear("Tiny familiar gets a size-scaled share", s[1], 76 * 22.5 / (240 + 22.5));
+}
+{
+  // A vehicle with no cargo capacity reports 0, so the split falls back to even.
+  ACTORS.set("cart", { id: "cart", name: "Cart", type: "vehicle", system: { attributes: { capacity: { cargo: { value: null } } } } });
+  const pile = makePile([{ w: 60 }], { enabled: true, strategy: "capacity", members: ["a", "cart"] });
+  check("unknown capacity falls back to even", shareList(pile), [30, 30]);
+}
+{
+  const pile = makePile([{ w: 68 }], { enabled: true, strategy: "strength", members: ["a", "b", "c"] });
+  checkNear("retired 'strength' config reads as capacity", shareList(pile)[0], 68 * 16 / 34);
 }
 
 console.log("\ncomputeShares - manual");
